@@ -32,15 +32,18 @@ def find_differences():
         diff = cv2.absdiff(gray1, gray2)
         _, thresh = cv2.threshold(diff, 30, 255, cv2.THRESH_BINARY)
 
-        # Находим контуры различий
-        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        # Увеличиваем разницу с помощью морфологических операций
+        kernel = np.ones((5, 5), np.uint8)
+        dilated = cv2.dilate(thresh, kernel, iterations=3)
 
-        # Рисуем контуры на втором изображении
+        # Находим контуры всех различий
+        contours, _ = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Рисуем все контуры на втором изображении
         img_diff = img2.copy()
         for contour in contours:
-            if cv2.contourArea(contour) > 500:  # Порог площади для исключения мелких различий
-                x, y, w, h = cv2.boundingRect(contour)
-                cv2.rectangle(img_diff, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            x, y, w, h = cv2.boundingRect(contour)
+            cv2.rectangle(img_diff, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
         # Обновляем второе изображение с выделенными различиями
         img_rgb_diff = cv2.cvtColor(img_diff, cv2.COLOR_BGR2RGB)
