@@ -1,37 +1,73 @@
-from tkinter import *
+from tkinter import Tk, Button, Label, Frame, Text, Scrollbar, RIGHT, Y, END
+from tkinter import ttk  # Импортируем ttk для комбобокса
+import cv2  # Импортируем OpenCV для работы с камерами
 
+def get_camera_list():
+    # Получаем список доступных камер
+    index = 0
+    camera_list = []
+    while True:
+        cap = cv2.VideoCapture(index)
+        if not cap.isOpened():
+            break
+        camera_list.append(f"Камера {index}")
+        index += 1
+        cap.release()
+    return camera_list
 
-def create_interface(load_image, capture_from_camera, rotate_image_button, compare_images):
+def create_interface(load_image, capture_from_camera, rotate_image_button, compare_images, infer_image_with_yolo, load_second_image):
     root = Tk()
-    root.title("Image Comparison with Rotation")
-    root.geometry("1000x838")  # Установка размеров окна приложения
+    root.title("Image Processing Application")
+    root.geometry("800x800")  # Задайте размер окна по вашему желанию
 
-    # Панели для отображения изображений
-    panel1 = Label(root,  bg="blue")  # Синий прямоугольник вместо первого изображения
-    panel1.place(x=1000-301, y=10,width=300, height=300)  # Позиция первого изображения (справа вверху)
+    # Создаем фрейм для панели кнопок
+    button_frame = Frame(root)
+    button_frame.pack(side="right", fill="y")  # Размещаем панель справа и заполняем по вертикали
+    # Создаем комбобокс для выбора камеры
+    camera_list = get_camera_list()
+    selected_camera = ttk.Combobox(button_frame, values=camera_list, state="readonly")
+    selected_camera.pack(pady=5)
+    selected_camera.current(0)  #
 
-    panel2 = Label(root,  bg="blue")  # Синий прямоугольник для второго изображения
-    panel2.place(x=10, y=10,width=680, height=600,)  # Позиция второго изображения (слева 10, сверху 10)
+    # Создаем кнопку для загрузки изображения
+    btn_load_image = Button(button_frame, text="Загрузить изображение", command=load_image)
+    btn_load_image.pack(pady=5)  # Добавляем отступы для кнопок
 
-    button_panel = Frame(root)
-    button_panel.place(x=1000-301, y=310, width=183, height=600)  # Позиция и размеры панели кнопок
+    btn_load_second_image = Button(button_frame, text="Загрузить 2 изображение", command=load_second_image)
+    btn_load_second_image.pack(pady=5)
 
-    # Кнопки для загрузки изображений и сравнения
-    btn_load1 = Button(button_panel, text="Загрузить первое изображение",
-                       command=lambda: load_image(panel1))
-    btn_load1.pack(pady=5)  # Использование pack для кнопок
+    # Создаем кнопку для захвата изображения с камеры
+    btn_capture_camera = Button(button_frame, text="Сделать фото с камеры", command=capture_from_camera)
+    btn_capture_camera.pack(pady=5)
 
-    btn_load2_file = Button(button_panel, text="Загрузить второе изображение",
-                            command=lambda: load_image(panel2))
-    btn_load2_file.pack(pady=5)
+    # Создаем кнопку для поворота изображения
+    btn_rotate_image = Button(button_frame, text="Повернуть изображение", command=rotate_image_button)
+    btn_rotate_image.pack(pady=5)
 
-    btn_capture2 = Button(button_panel, text="Сделать снимок с камеры", command=lambda: capture_from_camera(panel2))
-    btn_capture2.pack(pady=5)
+    # Создаем кнопку для сравнения изображений
+    btn_compare_images = Button(button_frame, text="Найти различия", command=compare_images)
+    btn_compare_images.pack(pady=5)
 
-    btn_rotate = Button(button_panel, text="Повернуть изображение", command=rotate_image_button)
-    btn_rotate.pack(pady=5)
+    # Создаем кнопку для инференса YOLO
+    btn_infer_image = Button(button_frame, text="Инференс YOLO", command=infer_image_with_yolo)
+    btn_infer_image.pack(pady=5)
 
-    btn_compare = Button(button_panel, text="Найти различия", command=compare_images)
-    btn_compare.pack(pady=5)
+    # Создаем кнопку для выхода из приложения
+    btn_exit = Button(button_frame, text="Выйти", command=root.quit)
+    btn_exit.pack(pady=5)
+    # Создаем текстовое поле для вывода данных
+    output_text = Text(button_frame, height=10, width=30)
+    output_text.pack(pady=5)
 
-    return root, panel1, panel2
+    # Создаем панели для отображения изображений
+    panel1 = Label(root)  # Для первого изображения
+    panel1.pack(side="left", padx=10, pady=10)
+
+    panel2 = Label(root)  # Для второго изображения или различий
+    panel2.pack(side="left", padx=10, pady=10)
+
+
+
+
+
+    return root, panel1, panel2,output_text, selected_camera

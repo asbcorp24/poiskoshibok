@@ -1,9 +1,68 @@
+from ultralytics import YOLO
+import onnx
+import onnxruntime
 import cv2
 import numpy as np
 from PIL import Image, ImageTk
 import math
 from tkinter import filedialog, Tk  # Импортируйте filedialog и Tk из tkinter
 from interface import create_interface
+from tkinter import  END
+
+model = YOLO("best.onnx", task="detect")
+
+
+def model_infer(image,save_path,output_text) -> dict:
+    '''
+    Обрабатывает картинку img_path,
+    сохраняет результат в текстовом виде и в виде результирующей картинки в save_path,
+    возвращает словарь Имя элемента -> количество штук на картинке
+    '''
+    results = model(image)
+    res = results[0]
+
+    elements = dict()
+    for x in res.boxes.data:  # Исправлено получение результатов
+        name = x[-1]  # Последний элемент данных — это имя класса
+        if name not in elements.keys():
+            elements[name] = 1
+        else:
+            elements[name] += 1
+
+    save_path = "result"
+    results[0].save_txt(save_path + ".txt")  # сохраняет тхт в виде id x y w h
+    results[0].save(save_path + ".jpg")  # сохраняет картинку с наложенными лейблами
+    # Выводим результаты в текстовое поле
+    output_text.delete(1.0, END)  # Очищаем предыдущее содержимое
+    output_text.insert(END, str(elements))  # Вставляем новые данные
+    return elements
+
+def infer_image(panel,output_text):
+    # Используем изображение из image1 для инференса
+    img1 = image1["image"]
+    if img1 is None:
+        print("Нет изображения для обработки")
+        return
+
+    save_path = "result"
+    # Сохраняем изображение во временный файл для инференса
+    temp_img_path = "temp_image.jpg"
+    cv2.imwrite(temp_img_path, img1)  # Сохраняем img1 в файл
+
+    # Запускаем инференс
+    model_infer(temp_img_path, save_path,output_text)
+
+    # Загрузка обработанного изображения и вывод на экран
+    img_with_labels = cv2.imread(save_path + ".jpg")
+    img_resized = cv2.resize(img_with_labels, (700, 600))  # Сжимаем изображение для отображения в panel2
+    img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
+    img_pil = Image.fromarray(img_rgb)
+    img_tk = ImageTk.PhotoImage(image=img_pil)
+
+    panel.config(image=img_tk)
+    panel.image = img_tk
+
+
 # Функция для сжатия изображения до 640x480, сохраняя пропорции
 def resize_to_fit(img, target_width=640, target_height=480):
     h, w = img.shape[:2]
@@ -21,7 +80,7 @@ def resize_to_fit(img, target_width=640, target_height=480):
     return resized_img
 
 # Функция для загрузки изображения
-def load_image(panel):
+def load_image(panel, image_store):
     filename = filedialog.askopenfilename(title="Выберите изображение")
     if filename:
         img = cv2.imread(filename)
@@ -31,10 +90,25 @@ def load_image(panel):
         img_tk = ImageTk.PhotoImage(image=img_pil)
         panel.config(image=img_tk)
         panel.image = img_tk
+        image_store["image"] = img  # Сохраняем изображение в переменной
+# Функция для загрузки второго изображения
+def load_second_image(panel,image_store):
+    filename = filedialog.askopenfilename(title="Выберите второе изображение")
+    if filename:
+        img = cv2.imread(filename)
+        img_resized = resize_to_fit(img)  # Сжимаем изображение до 640x480
+        image2["image"] = img_resized  # Сохраняем изображение во второй переменной
 
-# Функция для захвата изображения с камеры
-def capture_from_camera(panel):
-    cap = cv2.VideoCapture(0)  # Открываем камеру (0 — это индекс камеры по умолчанию)
+        img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
+        img_pil = Image.fromarray(img_rgb)
+        img_tk = ImageTk.PhotoImage(image=img_pil)
+
+        panel.config(image=img_tk)
+        panel.image = img_tk
+        image_store["image"] = img
+    # Функция для захвата изображения с камеры
+def capture_from_camera(panel, image_store,camera_index):
+    cap = cv2.VideoCapture(int(camera_index.split()[-1]))  # Получаем номер камеры
     ret, frame = cap.read()
     cap.release()  # Освобождаем камеру
 
@@ -45,6 +119,7 @@ def capture_from_camera(panel):
         img_tk = ImageTk.PhotoImage(image=img_pil)
         panel.config(image=img_tk)
         panel.image = img_tk
+        image_store["image"] = frame  # Сохраняем изображение в переменной
 
 # Функция для нахождения угла поворота по самой длинной линии
 def find_rotation_angle(image):
@@ -84,26 +159,22 @@ def rotate_image(image, angle):
 
 # Функция для нахождения различий между двумя изображениями
 def find_differences(img1, img2):
-    # Преобразуем изображения в серый цвет
     gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
     gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
 
-    # Находим абсолютную разницу между изображениями
     diff = cv2.absdiff(gray1, gray2)
+    _, thresh = cv2.threshold(diff, 20, 255, cv2.THRESH_BINARY)  # Изменено пороговое значение
 
-    # Применяем пороговое значение для выделения различий
-    _, thresh = cv2.threshold(diff, 30, 255, cv2.THRESH_BINARY)
-
-    # Находим контуры различий
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    print(f"Найдено контуров: {len(contours)}")  # Отладочный вывод
 
-    # Рисуем контуры на копии второго изображения
     img_with_differences = img2.copy()
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
         cv2.rectangle(img_with_differences, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
     return img_with_differences
+
 
 # Функция для поворота изображения второго изображения
 def rotate_image_button():
@@ -130,7 +201,11 @@ def compare_images():
 
     if img1 is not None and img2 is not None:
         img_with_differences = find_differences(img1, img2)
-        img_rgb_diff = cv2.cvtColor(img_with_differences, cv2.COLOR_BGR2RGB)
+
+        # Сжимаем изображение с различиями до размеров панели
+        img_resized_diff = resize_to_fit(img_with_differences, target_width=700, target_height=600)
+
+        img_rgb_diff = cv2.cvtColor(img_resized_diff, cv2.COLOR_BGR2RGB)
         img_pil_diff = Image.fromarray(img_rgb_diff)
         img_tk_diff = ImageTk.PhotoImage(image=img_pil_diff)
 
@@ -143,7 +218,13 @@ image1 = {"image": None}
 image2 = {"image": None}
 
 # Создание интерфейса
-root, panel1, panel2 = create_interface(load_image, capture_from_camera, rotate_image_button, compare_images)
-
+root, panel1, panel2,output_text,selected_camera  = create_interface(
+    load_image=lambda: load_image(panel1, image1),
+    capture_from_camera=lambda: capture_from_camera(panel1, image1,selected_camera.get()),
+    rotate_image_button=rotate_image_button,
+    compare_images=compare_images,
+    infer_image_with_yolo=lambda: infer_image(panel2, output_text), # Передача функции инференса
+    load_second_image = lambda: load_second_image(panel2, image2)  # Передача функции загрузки второго изображения
+)
 # Запуск основного цикла приложения
 root.mainloop()
