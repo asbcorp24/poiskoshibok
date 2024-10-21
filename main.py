@@ -213,18 +213,20 @@ def compare_images():
         panel2.config(image=img_tk_diff)
         panel2.image = img_tk_diff
 
-# Переменные для хранения изображений
-image1 = {"image": None}
-image2 = {"image": None}
 
-# Создание интерфейса
-root, panel1, panel2,output_text,selected_camera  = create_interface(
-    load_image=lambda: load_image(panel1, image1),
-    capture_from_camera=lambda: capture_from_camera(panel1, image1,selected_camera.get()),
-    rotate_image_button=rotate_image_button,
-    compare_images=compare_images,
-    infer_image_with_yolo=lambda: infer_image(panel2, output_text), # Передача функции инференса
-    load_second_image = lambda: load_second_image(panel2, image2)  # Передача функции загрузки второго изображения
-)
-# Запуск основного цикла приложения
-root.mainloop()
+if __name__ == "__main__":
+    # Переменные для хранения изображений
+    image1 = {"image": None}
+    image2 = {"image": None}
+
+    # Создание интерфейса
+    root, panel1, panel2, output_text, selected_camera = create_interface(
+        load_image=lambda: load_image(panel1, image1),
+        capture_from_camera=lambda: capture_from_camera(panel1, image1,selected_camera.get()),
+        rotate_image_button=rotate_image_button,
+        compare_images=compare_images,
+        infer_image_with_yolo=lambda: infer_image(panel2, output_text), # Передача функции инференса
+        load_second_image = lambda: load_second_image(panel2, image2)  # Передача функции загрузки второго изображения
+    )
+    # Запуск основного цикла приложения
+    root.mainloop()
