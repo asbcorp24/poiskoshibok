@@ -27,7 +27,11 @@ def create_interface(load_image, capture_from_camera, rotate_image_button, compa
     camera_list = get_camera_list()
     selected_camera = ttk.Combobox(button_frame, values=camera_list, state="readonly")
     selected_camera.pack(pady=5)
-    selected_camera.current(0)  #
+
+    if selected_camera.get() != "": 
+        selected_camera.current(0)
+    else:
+        print("no cameras")
 
     # Создаем кнопку для загрузки изображения
     btn_load_image = Button(button_frame, text="Загрузить изображение", command=load_image)
@@ -65,9 +69,6 @@ def create_interface(load_image, capture_from_camera, rotate_image_button, compa
 
     panel2 = Label(root)  # Для второго изображения или различий
     panel2.pack(side="left", padx=10, pady=10)
-
-
-
 
 
     return root, panel1, panel2,output_text, selected_camera
