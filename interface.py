@@ -1,6 +1,9 @@
-from tkinter import Tk, Button, Label, Frame, Text, Scrollbar, RIGHT, Y, END
-from tkinter import ttk  # Импортируем ttk для комбобокса
+from tkinter import Tk, Label, Frame, Text
+import ttkbootstrap as ttk  # Импортируем ttkbootstrap для улучшенных стилей
 import cv2  # Импортируем OpenCV для работы с камерами
+
+import sqlite3  # Импортируем sqlite3 для работы с базой данных
+from PIL import Image, ImageTk  # Импортируем PIL для работы с изображениями
 
 def get_camera_list():
     # Получаем список доступных камер
@@ -15,60 +18,90 @@ def get_camera_list():
         cap.release()
     return camera_list
 
-def create_interface(load_image, capture_from_camera, rotate_image_button, compare_images, infer_image_with_yolo, load_second_image):
-    root = Tk()
+# Функция для получения имен изображений из базы данных
+def get_image_names_from_db():
+    conn = sqlite3.connect('images.db')  # Подключение к базе данных
+    cursor = conn.cursor()
+    cursor.execute("SELECT file_name FROM images")  # Измените 'images' на имя вашей таблицы
+    image_names = [row[0] for row in cursor.fetchall()]  # Получаем все имена изображений
+    conn.close()
+    return image_names
+def create_interface(load_image, capture_from_camera, rotate_image_button, compare_images, infer_image_with_yolo,
+                     load_second_image, load_image_from_db):
+    root = ttk.Window(themename="darkly")  # Создаем окно с темной темой
     root.title("Image Processing Application")
-    root.geometry("800x800")  # Задайте размер окна по вашему желанию
+    root.geometry("1000x800")  # Задаем размер окна
 
-    # Создаем фрейм для панели кнопок
-    button_frame = Frame(root)
-    button_frame.pack(side="right", fill="y")  # Размещаем панель справа и заполняем по вертикали
-    # Создаем комбобокс для выбора камеры
+    # Создаем основной фрейм для всего контента
+    main_frame = ttk.Frame(root)
+    main_frame.pack(fill="both", expand=True)
+
+    # Создаем фрейм для панели кнопок справа
+    button_frame = ttk.Frame(main_frame)
+    button_frame.pack(side="right", fill="y", padx=10, pady=10)
+
+    # Первый блок: Выбор камеры и загрузка изображений
+    ttk.Label(button_frame, text="Выбор камеры и изображений").pack(pady=10)
     camera_list = get_camera_list()
-    selected_camera = ttk.Combobox(button_frame, values=camera_list, state="readonly")
-    selected_camera.pack(pady=5)
-
-    if selected_camera.get() != "": 
+    selected_camera = ttk.Combobox(button_frame, values=camera_list, state="readonly", font=('Helvetica', 12))
+    selected_camera.pack(pady=10)
+    if selected_camera.get() != "":
         selected_camera.current(0)
     else:
         print("no cameras")
 
-    # Создаем кнопку для загрузки изображения
-    btn_load_image = Button(button_frame, text="Загрузить изображение", command=load_image)
-    btn_load_image.pack(pady=5)  # Добавляем отступы для кнопок
+    # Кнопки с закругленными углами
+    button_style = {"bootstyle": "primary-outline", "width": 20}  # Используем стиль с закругленными углами
+    btn_load_image = ttk.Button(button_frame, text="Загрузить изображение", command=load_image, **button_style)
+    btn_load_image.pack(pady=10)
 
-    btn_load_second_image = Button(button_frame, text="Загрузить 2 изображение", command=load_second_image)
-    btn_load_second_image.pack(pady=5)
+    btn_load_second_image = ttk.Button(button_frame, text="Загрузить 2 изображение", command=load_second_image,
+                                       **button_style)
+    btn_load_second_image.pack(pady=10)
 
-    # Создаем кнопку для захвата изображения с камеры
-    btn_capture_camera = Button(button_frame, text="Сделать фото с камеры", command=capture_from_camera)
-    btn_capture_camera.pack(pady=5)
+    btn_capture_camera = ttk.Button(button_frame, text="Сделать фото с камеры", command=capture_from_camera,
+                                    **button_style)
+    btn_capture_camera.pack(pady=10)
+    # Добавьте комбобокс для загрузки изображения из базы данных
+    ttk.Label(button_frame, text="Выбор изображения из базы данных").pack(pady=10)
+    image_names = get_image_names_from_db()  # Получите список имен изображений из базы данных
+    selected_image = ttk.Combobox(button_frame, values=image_names, state="readonly", font=('Helvetica', 12))
+    selected_image.pack(pady=10)
 
-    # Создаем кнопку для поворота изображения
-    btn_rotate_image = Button(button_frame, text="Повернуть изображение", command=rotate_image_button)
-    btn_rotate_image.pack(pady=5)
+    # Кнопка для загрузки изображения из комбобокса
+    btn_load_from_db = ttk.Button(button_frame, text="Загрузить из базы данных",
+                                  command=lambda: load_image_from_db(selected_image.get(), panel1), **button_style)
+    btn_load_from_db.pack(pady=10)
+    # Второй блок: Обработка изображений
+    ttk.Label(button_frame, text="Обработка изображений").pack(pady=10)
+    btn_rotate_image = ttk.Button(button_frame, text="Повернуть изображение", command=rotate_image_button,
+                                  **button_style)
+    btn_rotate_image.pack(pady=10)
 
-    # Создаем кнопку для сравнения изображений
-    btn_compare_images = Button(button_frame, text="Найти различия", command=compare_images)
-    btn_compare_images.pack(pady=5)
+    btn_compare_images = ttk.Button(button_frame, text="Найти различия", command=compare_images, **button_style)
+    btn_compare_images.pack(pady=10)
 
-    # Создаем кнопку для инференса YOLO
-    btn_infer_image = Button(button_frame, text="Инференс YOLO", command=infer_image_with_yolo)
-    btn_infer_image.pack(pady=5)
+    btn_infer_image = ttk.Button(button_frame, text="Инференс YOLO", command=infer_image_with_yolo, **button_style)
+    btn_infer_image.pack(pady=10)
 
-    # Создаем кнопку для выхода из приложения
-    btn_exit = Button(button_frame, text="Выйти", command=root.quit)
-    btn_exit.pack(pady=5)
-    # Создаем текстовое поле для вывода данных
-    output_text = Text(button_frame, height=10, width=30)
-    output_text.pack(pady=5)
+    # Кнопка выхода внизу
+    btn_exit = ttk.Button(button_frame, text="Выйти", command=root.quit, **button_style)
+    btn_exit.pack(pady=10, side="bottom")
 
-    # Создаем панели для отображения изображений
-    panel1 = Label(root)  # Для первого изображения
-    panel1.pack(side="left", padx=10, pady=10)
+    # Создаем текстовое поле для вывода данных снизу
+    output_text = Text(main_frame, height=5, width=30, bg='#1B263B', fg='white', font=('Helvetica', 12), bd=2,
+                       relief='solid')
+    output_text.pack(side="bottom", fill="x", padx=10, pady=10)
 
-    panel2 = Label(root)  # Для второго изображения или различий
-    panel2.pack(side="left", padx=10, pady=10)
+    # Создаем фрейм для отображения изображений слева и справа
+    image_frame = ttk.Frame(main_frame)
+    image_frame.pack(side="left", fill="both", expand=True, padx=10, pady=10)
 
+    # Панели для отображения изображений с границами
+    panel1 = Label(image_frame, bg='#0D1B2A', bd=2, relief='solid')  # Для первого изображения с рамкой
+    panel1.pack(side="left", padx=10, pady=10, expand=True)
 
-    return root, panel1, panel2,output_text, selected_camera
+    panel2 = Label(image_frame, bg='#0D1B2A', bd=2, relief='solid')  # Для второго изображения или различий с рамкой
+    panel2.pack(side="right", padx=10, pady=10, expand=True)
+
+    return root, panel1, panel2, output_text, selected_camera

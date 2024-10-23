@@ -8,10 +8,60 @@ import math
 from tkinter import filedialog, Tk  # Импортируйте filedialog и Tk из tkinter
 from interface import create_interface
 from tkinter import  END
-
+import os
+import sqlite3
+import shutil
 model = YOLO("best.onnx", task="detect")
+if not os.path.exists('data'):
+    os.makedirs('data')
 
+# Создание или подключение к базе данных SQLite
+def create_database():
+    conn = sqlite3.connect('images.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS images (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            file_name TEXT NOT NULL,
+            file_path TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    return conn
 
+# Функция для получения имен изображений из базы данных
+def get_image_names_from_db():
+    conn = sqlite3.connect('images.db')
+    c = conn.cursor()
+    c.execute('SELECT file_name FROM images')
+    names = [row[0] for row in c.fetchall()]  # Получаем все имена файлов
+    conn.close()
+    return names
+# Функция для загрузки изображения из базы данных
+def load_image_from_db(selected_file_name, panel):
+    conn = sqlite3.connect('images.db')
+    c = conn.cursor()
+    c.execute('SELECT file_path FROM images WHERE file_name = ?', (selected_file_name,))
+    result = c.fetchone()
+    conn.close()
+
+    if result:
+        file_path = result[0]
+        img = cv2.imread(file_path)
+        img_resized = resize_to_fit(img)  # Сжимаем изображение до 640x480
+        img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
+        img_pil = Image.fromarray(img_rgb)
+        img_tk = ImageTk.PhotoImage(image=img_pil)
+        panel.config(image=img_tk)
+        panel.image = img_tk
+        image1["image"] = img
+    else:
+        print("Изображение не найдено в базе данных.")
+
+def save_image_to_db(conn, file_name, file_path):
+    c = conn.cursor()
+    c.execute('INSERT INTO images (file_name, file_path) VALUES (?, ?)', (file_name, file_path))
+    conn.commit()
 def model_infer(image,save_path,output_text) -> dict:
     '''
     Обрабатывает картинку img_path,
@@ -78,7 +128,18 @@ def resize_to_fit(img, target_width=640, target_height=480):
 
     resized_img = cv2.resize(img, (new_width, new_height))
     return resized_img
+def generate_unique_filename(directory, original_name):
+    """Генерирует уникальное имя файла, если файл с таким именем уже существует."""
+    name, extension = os.path.splitext(original_name)
+    unique_name = original_name
+    counter = 1
 
+    # Генерация нового имени, пока файл с таким именем существует
+    while os.path.exists(os.path.join(directory, unique_name)):
+        unique_name = f"{name}_{counter}{extension}"  # Пример: image_1.jpg
+        counter += 1
+
+    return unique_name
 # Функция для загрузки изображения
 def load_image(panel, image_store):
     filename = filedialog.askopenfilename(title="Выберите изображение")
@@ -91,6 +152,17 @@ def load_image(panel, image_store):
         panel.config(image=img_tk)
         panel.image = img_tk
         image_store["image"] = img  # Сохраняем изображение в переменной
+
+        # Копируем изображение в папку data
+        file_name = os.path.basename(filename)
+        unique_file_name = generate_unique_filename('data', file_name)  # Получаем уникальное имя файла
+        destination = os.path.join('data', unique_file_name)
+        shutil.copy(filename, destination)  # Копируем файл в папку data
+
+        # Сохраняем оригинальное имя и путь к файлу в базе данных
+        conn = create_database()  # Подключаемся к базе данных
+        save_image_to_db(conn, file_name, destination)  # Сохраняем оригинальное имя и путь
+        conn.close()  # Закрываем соединение с базой данных
 # Функция для загрузки второго изображения
 def load_second_image(panel,image_store):
     filename = filedialog.askopenfilename(title="Выберите второе изображение")
@@ -226,7 +298,8 @@ if __name__ == "__main__":
         rotate_image_button=rotate_image_button,
         compare_images=compare_images,
         infer_image_with_yolo=lambda: infer_image(panel2, output_text), # Передача функции инференса
-        load_second_image = lambda: load_second_image(panel2, image2)  # Передача функции загрузки второго изображения
+        load_second_image = lambda: load_second_image(panel2, image2),  # Передача функции загрузки второго изображения
+        load_image_from_db=load_image_from_db
     )
     # Запуск основного цикла приложения
     root.mainloop()
