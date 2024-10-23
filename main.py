@@ -15,6 +15,7 @@ model = YOLO("best.onnx", task="detect")
 if not os.path.exists('data'):
     os.makedirs('data')
 
+
 # Создание или подключение к базе данных SQLite
 def create_database():
     conn = sqlite3.connect('images.db')
