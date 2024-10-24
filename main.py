@@ -16,8 +16,9 @@ if not os.path.exists('data'):
     os.makedirs('data')
 
 
-# Создание или подключение к базе данных SQLite
+
 def create_database():
+    '''Создание или подключение к базе данных SQLite'''
     conn = sqlite3.connect('images.db')
     c = conn.cursor()
     c.execute('''
@@ -30,16 +31,19 @@ def create_database():
     conn.commit()
     return conn
 
-# Функция для получения имен изображений из базы данных
+
 def get_image_names_from_db():
+    '''Функция для получения имен изображений из базы данных'''
     conn = sqlite3.connect('images.db')
     c = conn.cursor()
     c.execute('SELECT file_name FROM images')
     names = [row[0] for row in c.fetchall()]  # Получаем все имена файлов
     conn.close()
     return names
-# Функция для загрузки изображения из базы данных
+
+
 def load_image_from_db(selected_file_name, panel):
+    '''Функция для загрузки изображения из базы данных'''
     conn = sqlite3.connect('images.db')
     c = conn.cursor()
     c.execute('SELECT file_path FROM images WHERE file_name = ?', (selected_file_name,))
@@ -59,13 +63,16 @@ def load_image_from_db(selected_file_name, panel):
     else:
         print("Изображение не найдено в базе данных.")
 
+
 def save_image_to_db(conn, file_name, file_path):
     c = conn.cursor()
     c.execute('INSERT INTO images (file_name, file_path) VALUES (?, ?)', (file_name, file_path))
     conn.commit()
-def model_infer(image,save_path,output_text) -> dict:
+
+
+def model_infer(image, save_path) -> dict:
     '''
-    Обрабатывает картинку img_path,
+    Обрабатывает картинку image,
     сохраняет результат в текстовом виде и в виде результирующей картинки в save_path,
     возвращает словарь Имя элемента -> количество штук на картинке
     '''
@@ -73,22 +80,23 @@ def model_infer(image,save_path,output_text) -> dict:
     res = results[0]
 
     elements = dict()
-    for x in res.boxes.data:  # Исправлено получение результатов
-        name = x[-1]  # Последний элемент данных — это имя класса
+    for x in res.summary():
+        name = x['name']
         if name not in elements.keys():
             elements[name] = 1
         else:
             elements[name] += 1
 
-    save_path = "result"
+    if os.path.isfile(save_path + ".txt"):
+        os.remove(save_path + ".txt")
+        
     results[0].save_txt(save_path + ".txt")  # сохраняет тхт в виде id x y w h
     results[0].save(save_path + ".jpg")  # сохраняет картинку с наложенными лейблами
-    # Выводим результаты в текстовое поле
-    output_text.delete(1.0, END)  # Очищаем предыдущее содержимое
-    output_text.insert(END, str(elements))  # Вставляем новые данные
+
     return elements
 
-def infer_image(panel,output_text):
+
+def infer_image(panel, elems_textbox):
     # Используем изображение из image1 для инференса
     img1 = image1["image"]
     if img1 is None:
@@ -101,7 +109,13 @@ def infer_image(panel,output_text):
     cv2.imwrite(temp_img_path, img1)  # Сохраняем img1 в файл
 
     # Запускаем инференс
-    model_infer(temp_img_path, save_path,output_text)
+    elements = model_infer(temp_img_path, save_path)
+
+    output_text.delete(1.0, END)  # Очищаем предыдущее содержимое
+
+    # Выводим результаты в текстовое поле
+    for key, value in elements.items():
+        output_text.insert(END, f"{key}: {str(value)}\n")  # Вставляем новые данные
 
     # Загрузка обработанного изображения и вывод на экран
     img_with_labels = cv2.imread(save_path + ".jpg")
@@ -114,8 +128,9 @@ def infer_image(panel,output_text):
     panel.image = img_tk
 
 
-# Функция для сжатия изображения до 640x480, сохраняя пропорции
 def resize_to_fit(img, target_width=640, target_height=480):
+    '''Функция для сжатия изображения до 640x480, сохраняя пропорции'''
+    #TODO: Почему до 640х480? Нейронка ест квадратные изображения. Для нейронки лучше 640х640
     h, w = img.shape[:2]
     aspect_ratio = w / h
 
@@ -129,8 +144,10 @@ def resize_to_fit(img, target_width=640, target_height=480):
 
     resized_img = cv2.resize(img, (new_width, new_height))
     return resized_img
+
+
 def generate_unique_filename(directory, original_name):
-    """Генерирует уникальное имя файла, если файл с таким именем уже существует."""
+    '''Генерирует уникальное имя файла, если файл с таким именем уже существует.'''
     name, extension = os.path.splitext(original_name)
     unique_name = original_name
     counter = 1
@@ -141,8 +158,10 @@ def generate_unique_filename(directory, original_name):
         counter += 1
 
     return unique_name
-# Функция для загрузки изображения
+
+
 def load_image(panel, image_store):
+    '''Функция для загрузки изображения'''
     filename = filedialog.askopenfilename(title="Выберите изображение")
     if filename:
         img = cv2.imread(filename)
@@ -164,8 +183,10 @@ def load_image(panel, image_store):
         conn = create_database()  # Подключаемся к базе данных
         save_image_to_db(conn, file_name, destination)  # Сохраняем оригинальное имя и путь
         conn.close()  # Закрываем соединение с базой данных
-# Функция для загрузки второго изображения
+
+
 def load_second_image(panel,image_store):
+    ''' Функция для загрузки второго изображения'''
     filename = filedialog.askopenfilename(title="Выберите второе изображение")
     if filename:
         img = cv2.imread(filename)
@@ -179,8 +200,10 @@ def load_second_image(panel,image_store):
         panel.config(image=img_tk)
         panel.image = img_tk
         image_store["image"] = img
-    # Функция для захвата изображения с камеры
+
+
 def capture_from_camera(panel, image_store,camera_index):
+    '''Функция для захвата изображения с камеры'''
     cap = cv2.VideoCapture(int(camera_index.split()[-1]))  # Получаем номер камеры
     ret, frame = cap.read()
     cap.release()  # Освобождаем камеру
@@ -194,8 +217,9 @@ def capture_from_camera(panel, image_store,camera_index):
         panel.image = img_tk
         image_store["image"] = frame  # Сохраняем изображение в переменной
 
-# Функция для нахождения угла поворота по самой длинной линии
+
 def find_rotation_angle(image):
+    '''Функция для нахождения угла поворота по самой длинной линии'''
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     edges = cv2.Canny(gray, 50, 150, apertureSize=3)
 
@@ -219,8 +243,9 @@ def find_rotation_angle(image):
             return angle, best_line
     return 0, None
 
-# Функция для поворота изображения на заданный угол
+
 def rotate_image(image, angle):
+    '''Функция для поворота изображения на заданный угол'''
     (h, w) = image.shape[:2]
     center = (w // 2, h // 2)
 
@@ -230,8 +255,9 @@ def rotate_image(image, angle):
 
     return rotated
 
-# Функция для нахождения различий между двумя изображениями
+
 def find_differences(img1, img2):
+    '''Функция для нахождения различий между двумя изображениями'''
     gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
     gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
 
@@ -249,8 +275,8 @@ def find_differences(img1, img2):
     return img_with_differences
 
 
-# Функция для поворота изображения второго изображения
 def rotate_image_button():
+    '''Функция для поворота изображения второго изображения'''
     img2 = image2["image"]
 
     if img2 is not None:
@@ -267,8 +293,9 @@ def rotate_image_button():
             panel2.config(image=img_tk)
             panel2.image = img_tk
 
-# Функция для нахождения и отображения различий между двумя изображениями
+
 def compare_images():
+    '''Функция для нахождения и отображения различий между двумя изображениями'''
     img1 = image1["image"]
     img2 = image2["image"]
 

@@ -7,7 +7,7 @@ from PIL import Image, ImageTk  # Импортируем PIL для работы
 
 
 def get_camera_list():
-    # Получаем список доступных камер
+    '''Получаем список доступных камер'''
     index = 0
     camera_list = []
     while True:
@@ -19,14 +19,21 @@ def get_camera_list():
         cap.release()
     return camera_list
 
-# Функция для получения имен изображений из базы данных
+
 def get_image_names_from_db():
-    conn = sqlite3.connect('images.db')  # Подключение к базе данных
-    cursor = conn.cursor()
-    cursor.execute("SELECT file_name FROM images")  # Измените 'images' на имя вашей таблицы
-    image_names = [row[0] for row in cursor.fetchall()]  # Получаем все имена изображений
-    conn.close()
+    '''Функция для получения имен изображений из базы данных'''
+    image_names = []
+    try:
+        conn = sqlite3.connect('images.db')  # Подключение к базе данных
+        cursor = conn.cursor()
+        cursor.execute("SELECT file_name FROM images")  # Измените 'images' на имя вашей таблицы
+        image_names = [row[0] for row in cursor.fetchall()]  # Получаем все имена изображений
+        conn.close()
+    except:
+        print("Нет доступа к базе данных")
     return image_names
+
+
 def create_interface(load_image, capture_from_camera, rotate_image_button, compare_images, infer_image_with_yolo,
                      load_second_image, load_image_from_db):
     root = ttk.Window(themename="darkly")  # Создаем окно с темной темой
@@ -63,9 +70,11 @@ def create_interface(load_image, capture_from_camera, rotate_image_button, compa
     btn_capture_camera = ttk.Button(button_frame, text="Сделать фото с камеры", command=capture_from_camera,
                                     **button_style)
     btn_capture_camera.pack(pady=10)
+    
     # Добавьте комбобокс для загрузки изображения из базы данных
     ttk.Label(button_frame, text="Выбор изображения из базы данных").pack(pady=10)
     image_names = get_image_names_from_db()  # Получите список имен изображений из базы данных
+
     selected_image = ttk.Combobox(button_frame, values=image_names, state="readonly", font=('Helvetica', 12))
     selected_image.pack(pady=10)
 
