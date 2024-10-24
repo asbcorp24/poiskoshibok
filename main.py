@@ -89,7 +89,7 @@ def model_infer(image, save_path) -> dict:
 
     if os.path.isfile(save_path + ".txt"):
         os.remove(save_path + ".txt")
-        
+
     results[0].save_txt(save_path + ".txt")  # сохраняет тхт в виде id x y w h
     results[0].save(save_path + ".jpg")  # сохраняет картинку с наложенными лейблами
 
@@ -111,11 +111,11 @@ def infer_image(panel, elems_textbox):
     # Запускаем инференс
     elements = model_infer(temp_img_path, save_path)
 
-    output_text.delete(1.0, END)  # Очищаем предыдущее содержимое
+    elems_textbox.delete(1.0, END)  # Очищаем предыдущее содержимое
 
     # Выводим результаты в текстовое поле
     for key, value in elements.items():
-        output_text.insert(END, f"{key}: {str(value)}\n")  # Вставляем новые данные
+        elems_textbox.insert(END, f"{key}: {str(value)}\n")  # Вставляем новые данные
 
     # Загрузка обработанного изображения и вывод на экран
     img_with_labels = cv2.imread(save_path + ".jpg")
