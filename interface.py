@@ -5,6 +5,9 @@ import cv2  # Импортируем OpenCV для работы с камера�
 import sqlite3  # Импортируем sqlite3 для работы с базой данных
 from PIL import Image, ImageTk  # Импортируем PIL для работы с изображениями
 
+import os
+import time
+import threading
 
 def get_camera_list():
     '''Получаем список доступных камер'''
@@ -34,8 +37,10 @@ def get_image_names_from_db():
     return image_names
 
 
+
+
 def create_interface(load_image, capture_from_camera, rotate_image_button, compare_images, infer_image_with_yolo,
-                     load_second_image, load_image_from_db):
+                     load_second_image, load_image_from_db,start_camera_capture):
     root = ttk.Window(themename="darkly")  # Создаем окно с темной темой
     root.title("Image Processing Application")
     root.geometry("1000x800")  # Задаем размер окна
@@ -70,6 +75,11 @@ def create_interface(load_image, capture_from_camera, rotate_image_button, compa
     btn_capture_camera = ttk.Button(button_frame, text="Сделать фото с камеры", command=capture_from_camera,
                                     **button_style)
     btn_capture_camera.pack(pady=10)
+
+    btn_capture_camera2 = ttk.Button(button_frame, text="Начать захват с камеры",
+                                     command=start_camera_capture,
+                                    **button_style)
+    btn_capture_camera2.pack(pady=10)
     
     # Добавьте комбобокс для загрузки изображения из базы данных
     ttk.Label(button_frame, text="Выбор изображения из базы данных").pack(pady=10)
@@ -111,7 +121,7 @@ def create_interface(load_image, capture_from_camera, rotate_image_button, compa
     panel1 = Label(image_frame, bg='#0D1B2A', bd=2, relief='solid')  # Для первого изображения с рамкой
     panel1.pack(side="left", padx=10, pady=10, expand=True)
 
-    panel2 = Label(image_frame, bg='#0D1B2A', bd=2, relief='solid')  # Для второго изображения или различий с рамкой
+    panel2 = Label(image_frame, bg='#0D1B2A', bd=2, relief='solid', width=640,height=480)  # Для второго изображения или различий с рамкой
     panel2.pack(side="right", padx=10, pady=10, expand=True)
 
     return root, panel1, panel2, output_text, selected_camera

@@ -11,6 +11,8 @@ from tkinter import  END
 import os
 import sqlite3
 import shutil
+import time
+import threading
 model = YOLO("best.onnx", task="detect")
 if not os.path.exists('data'):
     os.makedirs('data')
@@ -31,6 +33,38 @@ def create_database():
     conn.commit()
     return conn
 
+def capture_camera_periodically(panel2, image2):
+    cap = cv2.VideoCapture(0)  # Открыть камеру
+    if not cap.isOpened():
+        print("Не удалось открыть камеру.")
+        return
+
+    while True:
+        ret, frame = cap.read()  # Чтение кадра
+        if not ret:
+            print("Не удалось захватить кадр.")
+            break
+
+        # Сохраняем изображение в папку tmpimg
+        cv2.imwrite('tmpimg/captured_image.jpg', frame)
+
+        # Отображаем изображение в panel2
+        image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        image = image.resize((panel2.winfo_width(), panel2.winfo_height()), Image.LANCZOS)
+
+        image2["image"] = image
+        img_tk = ImageTk.PhotoImage(image)
+        panel2.config(image=img_tk)
+        panel2.image = img_tk  # Сохраняем ссылку на изображение
+
+        time.sleep(5)  # Задержка в 5 секунд
+
+    cap.release()
+
+def start_camera_capture(panel2, image2):
+    # Запуск захвата изображения в отдельном потоке
+    print("пошел захват")
+    threading.Thread(target=capture_camera_periodically, args=(panel2, image2,), daemon=True).start()
 
 def get_image_names_from_db():
     '''Функция для получения имен изображений из базы данных'''
@@ -327,7 +361,8 @@ if __name__ == "__main__":
         compare_images=compare_images,
         infer_image_with_yolo=lambda: infer_image(panel2, output_text), # Передача функции инференса
         load_second_image = lambda: load_second_image(panel2, image2),  # Передача функции загрузки второго изображения
-        load_image_from_db=load_image_from_db
+        load_image_from_db=load_image_from_db,
+        start_camera_capture=lambda: start_camera_capture(panel2, image2)
     )
     # Запуск основного цикла приложения
     root.mainloop()
