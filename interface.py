@@ -40,7 +40,7 @@ def get_image_names_from_db():
 
 
 def create_interface(load_image, capture_from_camera, rotate_image_button, compare_images, infer_image_with_yolo,
-                     load_second_image, load_image_from_db,start_camera_capture):
+                     continuous_infer, load_second_image, load_image_from_db, start_camera_capture):
     root = ttk.Window(themename="darkly")  # Создаем окно с темной темой
     root.title("Image Processing Application")
     root.geometry("1000x800")  # Задаем размер окна
@@ -103,6 +103,10 @@ def create_interface(load_image, capture_from_camera, rotate_image_button, compa
 
     btn_infer_image = ttk.Button(button_frame, text="Инференс YOLO", command=infer_image_with_yolo, **button_style)
     btn_infer_image.pack(pady=10)
+
+    btn_cont_infer = ttk.Button(button_frame, text="Инференс в реальном времени", command=continuous_infer, **button_style)
+    btn_cont_infer.pack(pady=10)
+
 
     # Кнопка выхода внизу
     btn_exit = ttk.Button(button_frame, text="Выйти", command=root.quit, **button_style)

@@ -33,7 +33,7 @@ def create_database():
     conn.commit()
     return conn
 
-def capture_camera_periodically(panel2, image2):
+def capture_camera_periodically(panel2, image2, save_path):
     cap = cv2.VideoCapture(0)  # Открыть камеру
     if not cap.isOpened():
         print("Не удалось открыть камеру.")
@@ -46,7 +46,7 @@ def capture_camera_periodically(panel2, image2):
             break
 
         # Сохраняем изображение в папку tmpimg
-        cv2.imwrite('tmpimg/captured_image.jpg', frame)
+        cv2.imwrite(save_path, frame)
 
         # Отображаем изображение в panel2
         image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
@@ -130,20 +130,9 @@ def model_infer(image, save_path) -> dict:
     return elements
 
 
-def infer_image(panel, elems_textbox):
-    # Используем изображение из image1 для инференса
-    img1 = image1["image"]
-    if img1 is None:
-        print("Нет изображения для обработки")
-        return
-
-    save_path = "result"
-    # Сохраняем изображение во временный файл для инференса
-    temp_img_path = "temp_image.jpg"
-    cv2.imwrite(temp_img_path, img1)  # Сохраняем img1 в файл
-
+def update_interface_with_yolo(panel, img_path, save_path, elems_textbox):
     # Запускаем инференс
-    elements = model_infer(temp_img_path, save_path)
+    elements = model_infer(img_path, save_path)
 
     elems_textbox.delete(1.0, END)  # Очищаем предыдущее содержимое
 
@@ -160,6 +149,23 @@ def infer_image(panel, elems_textbox):
 
     panel.config(image=img_tk)
     panel.image = img_tk
+
+
+def infer_image(panel, elems_textbox):
+    # Используем изображение из image1 для инференса
+    img1 = image1["image"]
+    
+    if img1 is None:
+        print("Нет изображения для обработки")
+        return
+
+    save_path = "result"
+    # Сохраняем изображение во временный файл для инференса
+    temp_img_path = "temp_image.jpg"
+    cv2.imwrite(temp_img_path, img1)  # Сохраняем img1 в файл
+
+    update_interface_with_yolo(panel, temp_img_path, save_path, elems_textbox)
+    
 
 
 def resize_to_fit(img, target_width=640, target_height=480):
@@ -236,7 +242,7 @@ def load_second_image(panel,image_store):
         image_store["image"] = img
 
 
-def capture_from_camera(panel, image_store,camera_index):
+def capture_from_camera(panel, image_store, camera_index):
     '''Функция для захвата изображения с камеры'''
     cap = cv2.VideoCapture(int(camera_index.split()[-1]))  # Получаем номер камеры
     ret, frame = cap.read()
@@ -348,21 +354,64 @@ def compare_images():
         panel2.image = img_tk_diff
 
 
+
+def continuous_infer_handler(root, panel, elem_textbox, image_store, camera_index):
+    '''Управление флагами для функции continuous_infer'''
+    global is_continuous_infer
+    if not is_continuous_infer:
+        is_continuous_infer = True
+        continuous_infer(root, panel, elem_textbox, image_store, camera_index)
+    else:
+        is_continuous_infer = False
+    
+
+def continuous_infer(root, panel, elem_textbox, image_store, camera_index):
+    '''Получение изображений в реальном времени и обработка'''
+    global is_continuous_infer
+    global refresh_rate
+
+    if is_continuous_infer:
+        # Получаем изображение с камеры
+
+        folder_path = 'tmpimg/captured_image.jpg' # подставить имя нужного фолдера
+        capture_camera_periodically(panel2, image2, folder_path)
+
+        # TODO: реализовать получение изображения и сохранение в folder_path 
+
+        files = [os.path.join(folder_path, f) for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
+    
+        if not files:
+            return None
+        
+        last_modified_file = max(files, key=os.path.getmtime) # имя последнего изменявшегося файла
+
+        # Заглушка в виде захардкоженного файла
+        last_modified_file = "photo_2024-10-14_10-56-09.jpg" ## убрать, когда правильный фолдер подставлен
+
+        update_interface_with_yolo(panel, last_modified_file, "result", elem_textbox)
+        root.after(refresh_rate, lambda: continuous_infer(root, panel, elem_textbox, image_store, camera_index))
+
+
+
 if __name__ == "__main__":
     # Переменные для хранения изображений
     image1 = {"image": None}
     image2 = {"image": None}
 
+    is_continuous_infer = False
+    refresh_rate = 1000 # in ms
+
     # Создание интерфейса
     root, panel1, panel2, output_text, selected_camera = create_interface(
         load_image=lambda: load_image(panel1, image1),
-        capture_from_camera=lambda: capture_from_camera(panel1, image1,selected_camera.get()),
+        capture_from_camera=lambda: capture_from_camera(panel1, image1, selected_camera.get()),
         rotate_image_button=rotate_image_button,
         compare_images=compare_images,
         infer_image_with_yolo=lambda: infer_image(panel2, output_text), # Передача функции инференса
+        continuous_infer=lambda: continuous_infer_handler(root, panel2, output_text, image2, selected_camera.get()),
         load_second_image = lambda: load_second_image(panel2, image2),  # Передача функции загрузки второго изображения
         load_image_from_db=load_image_from_db,
-        start_camera_capture=lambda: start_camera_capture(panel2, image2)
+        start_camera_capture=lambda: start_camera_capture(panel2, image2) #TODO: delete button
     )
     # Запуск основного цикла приложения
     root.mainloop()
