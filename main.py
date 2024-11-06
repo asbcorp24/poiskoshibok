@@ -1,6 +1,6 @@
 from ultralytics import YOLO
-import onnx
-import onnxruntime
+#import onnx
+#import onnxruntime
 import cv2
 import numpy as np
 from PIL import Image, ImageTk
@@ -13,11 +13,12 @@ import sqlite3
 import shutil
 import time
 import threading
+
+
 model = YOLO("best.onnx", task="detect")
+
 if not os.path.exists('data'):
     os.makedirs('data')
-
-
 
 def create_database():
     '''Создание или подключение к базе данных SQLite'''
@@ -33,12 +34,12 @@ def create_database():
     conn.commit()
     return conn
 
-def capture_camera_periodically(panel2, image2, save_path):
+def capture_camera_periodically(panel2, image2, save_path, for_nn=False):
     cap = cv2.VideoCapture(0)  # Открыть камеру
     if not cap.isOpened():
         print("Не удалось открыть камеру.")
         return
-
+    
     while True:
         ret, frame = cap.read()  # Чтение кадра
         if not ret:
@@ -46,7 +47,10 @@ def capture_camera_periodically(panel2, image2, save_path):
             break
 
         # Сохраняем изображение в папку tmpimg
-        cv2.imwrite(save_path, frame)
+        cv2.imwrite(save_path + "jopa.jpg", frame)
+        if for_nn:
+            cap.release()
+            return
 
         # Отображаем изображение в panel2
         image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
@@ -64,7 +68,8 @@ def capture_camera_periodically(panel2, image2, save_path):
 def start_camera_capture(panel2, image2):
     # Запуск захвата изображения в отдельном потоке
     print("пошел захват")
-    threading.Thread(target=capture_camera_periodically, args=(panel2, image2,), daemon=True).start()
+    save_path="tmping/"
+    threading.Thread(target=capture_camera_periodically, args=(panel2, image2, save_path), daemon=True).start()
 
 def get_image_names_from_db():
     '''Функция для получения имен изображений из базы данных'''
@@ -371,12 +376,8 @@ def continuous_infer(root, panel, elem_textbox, image_store, camera_index):
     global refresh_rate
 
     if is_continuous_infer:
-        # Получаем изображение с камеры
-
-        folder_path = 'tmpimg/captured_image.jpg' # подставить имя нужного фолдера
-        capture_camera_periodically(panel2, image2, folder_path)
-
-        # TODO: реализовать получение изображения и сохранение в folder_path 
+        folder_path = 'tmpimg/' # подставить имя нужного фолдера
+        capture_camera_periodically(panel2, image2, folder_path, for_nn=True)
 
         files = [os.path.join(folder_path, f) for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
     
@@ -384,9 +385,6 @@ def continuous_infer(root, panel, elem_textbox, image_store, camera_index):
             return None
         
         last_modified_file = max(files, key=os.path.getmtime) # имя последнего изменявшегося файла
-
-        # Заглушка в виде захардкоженного файла
-        last_modified_file = "photo_2024-10-14_10-56-09.jpg" ## убрать, когда правильный фолдер подставлен
 
         update_interface_with_yolo(panel, last_modified_file, "result", elem_textbox)
         root.after(refresh_rate, lambda: continuous_infer(root, panel, elem_textbox, image_store, camera_index))
@@ -399,7 +397,7 @@ if __name__ == "__main__":
     image2 = {"image": None}
 
     is_continuous_infer = False
-    refresh_rate = 1000 # in ms
+    refresh_rate = 10 # in ms
 
     # Создание интерфейса
     root, panel1, panel2, output_text, selected_camera = create_interface(
