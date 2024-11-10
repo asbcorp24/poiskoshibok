@@ -16,6 +16,7 @@ import threading
 
 
 model = YOLO("best.onnx", task="detect")
+cam = None
 
 if not os.path.exists('data'):
     os.makedirs('data')
@@ -34,8 +35,8 @@ def create_database():
     conn.commit()
     return conn
 
-def capture_camera_periodically(panel2, image2, save_path, for_nn=False):
-    cap = cv2.VideoCapture(0)  # Открыть камеру
+def capture_camera_periodically(panel2, image2, save_path, camera_index, for_nn=False):
+    cap = cv2.VideoCapture(int(camera_index.split()[-1]))  # Открыть камеру
     if not cap.isOpened():
         print("Не удалось открыть камеру.")
         return
@@ -359,16 +360,103 @@ def compare_images():
         panel2.image = img_tk_diff
 
 
+def capture_global_camera(camera_index):
+    global cam
+
+    cam = cv2.VideoCapture(int(camera_index.split()[-1]))
+    if not cam.isOpened():
+        print("Не удалось открыть камеру.")
+        return
+
+
+def release_global_camera():
+    global cam
+
+    if cam is not None:
+        cam.release()
+
+def capture_global_camera_periodically(panel2, image2, save_path, camera_index, for_nn=False):
+    cap = cv2.VideoCapture(int(camera_index.split()[-1]))  # Открыть камеру
+    if not cap.isOpened():
+        print("Не удалось открыть камеру.")
+        return
+    
+    #TODO: use global camera instead
+
+    while True:
+        ret, frame = cap.read()  # Чтение кадра
+        if not ret:
+            print("Не удалось захватить кадр.")
+            break
+
+        # Сохраняем изображение в папку tmpimg
+        cv2.imwrite(save_path + "jopa.jpg", frame)
+        if for_nn:
+            cap.release()
+            return
+
+        # Отображаем изображение в panel2
+        image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        image = image.resize((panel2.winfo_width(), panel2.winfo_height()), Image.LANCZOS)
+
+        image2["image"] = image
+        img_tk = ImageTk.PhotoImage(image)
+        panel2.config(image=img_tk)
+        panel2.image = img_tk  # Сохраняем ссылку на изображение
+
+        time.sleep(5)  # Задержка в 5 секунд
+
 
 def continuous_infer_handler(root, panel, elem_textbox, image_store, camera_index):
-    '''Управление флагами для функции continuous_infer'''
-    global is_continuous_infer
-    if not is_continuous_infer:
-        is_continuous_infer = True
-        continuous_infer(root, panel, elem_textbox, image_store, camera_index)
-    else:
-        is_continuous_infer = False
-    
+    global cam
+    capture_global_camera(camera_index)
+
+    def update_frame():
+        # Read a frame from the camera
+        ret, frame = cam.read()
+        
+        # If the frame was not captured successfully, break the loop
+        if not ret:
+            print("Error: Could not read frame.")
+            return
+        
+        # Process the frame with the YOLO model
+        results = model(frame)
+
+        ''''''
+        res = results[0]
+
+        elements = dict()
+        for x in res.summary():
+            name = x['name']
+            if name not in elements.keys():
+                elements[name] = 1
+            else:
+                elements[name] += 1
+
+        elem_textbox.delete(1.0, END)  # Очищаем предыдущее содержимое
+
+        # Выводим результаты в текстовое поле
+        for key, value in elements.items():
+            elem_textbox.insert(END, f"{key}: {str(value)}\n")
+        ''''''
+        # Annotate the frame with detection results
+        annotated_frame = results[0].plot()  # Get the annotated frame
+
+        # Convert the frame to RGB format for displaying
+        img_rgb = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
+        img_pil = Image.fromarray(img_rgb)
+        img_tk = ImageTk.PhotoImage(image=img_pil)
+
+        # Update the panel with the new image
+        panel.config(image=img_tk)
+        panel.image = img_tk  # Keep a reference to avoid garbage collection
+
+        # Call this function again after a short delay
+        root.after(100, update_frame)  # Update every 100 ms
+
+    update_frame()  # Start the frame update loop
+
 
 def continuous_infer(root, panel, elem_textbox, image_store, camera_index):
     '''Получение изображений в реальном времени и обработка'''
@@ -377,7 +465,7 @@ def continuous_infer(root, panel, elem_textbox, image_store, camera_index):
 
     if is_continuous_infer:
         folder_path = 'tmpimg/' # подставить имя нужного фолдера
-        capture_camera_periodically(panel2, image2, folder_path, for_nn=True)
+        capture_global_camera_periodically(panel2, image2, folder_path, camera_index, for_nn=True)
 
         files = [os.path.join(folder_path, f) for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
     
@@ -390,14 +478,13 @@ def continuous_infer(root, panel, elem_textbox, image_store, camera_index):
         root.after(refresh_rate, lambda: continuous_infer(root, panel, elem_textbox, image_store, camera_index))
 
 
-
 if __name__ == "__main__":
     # Переменные для хранения изображений
     image1 = {"image": None}
     image2 = {"image": None}
 
     is_continuous_infer = False
-    refresh_rate = 10 # in ms
+    refresh_rate = 3000 # in ms
 
     # Создание интерфейса
     root, panel1, panel2, output_text, selected_camera = create_interface(
