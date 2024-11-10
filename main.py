@@ -249,19 +249,34 @@ def load_second_image(panel,image_store):
 
 
 def capture_from_camera(panel, image_store, camera_index):
-    '''Функция для захвата изображения с камеры'''
+    '''Функция для захвата 20 изображений с камеры и сохранения только последнего.'''
     cap = cv2.VideoCapture(int(camera_index.split()[-1]))  # Получаем номер камеры
-    ret, frame = cap.read()
+    
+    if not cap.isOpened():
+        print("Не удалось открыть камеру.")
+        return
+
+    last_frame = None  # Переменная для хранения последнего захваченного кадра
+    interested_in_frame_num = 20
+
+    for _ in range(interested_in_frame_num):  # Захватываем 20 изображений
+        ret, frame = cap.read()
+        if ret:
+            last_frame = frame  # Сохраняем последний кадр
+        else:
+            print("Не удалось захватить кадр.")
+            break
+
     cap.release()  # Освобождаем камеру
 
-    if ret:
-        img_resized = resize_to_fit(frame)  # Сжимаем изображение до 640x480
+    if last_frame is not None:
+        img_resized = resize_to_fit(last_frame)  # Сжимаем изображение до 640x480
         img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
         img_pil = Image.fromarray(img_rgb)
         img_tk = ImageTk.PhotoImage(image=img_pil)
         panel.config(image=img_tk)
         panel.image = img_tk
-        image_store["image"] = frame  # Сохраняем изображение в переменной
+        image_store["image"] = last_frame  # Сохраняем последнее изображение в переменной
 
 
 def find_rotation_angle(image):

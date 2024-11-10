@@ -60,8 +60,6 @@ def create_interface(load_image, capture_from_camera, rotate_image_button, compa
     selected_camera.pack(pady=10)
     if selected_camera.get() != "":
         selected_camera.current(0)
-    else:
-        print("no cameras")
 
     # Кнопки с закругленными углами
     button_style = {"bootstyle": "primary-outline", "width": 20}  # Используем стиль с закругленными углами
