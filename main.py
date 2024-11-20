@@ -1,6 +1,4 @@
 from ultralytics import YOLO
-#import onnx
-#import onnxruntime
 import cv2
 import numpy as np
 from PIL import Image, ImageTk
@@ -13,6 +11,7 @@ import sqlite3
 import shutil
 import time
 import threading
+import json
 
 
 model = YOLO("best.onnx", task="detect")
@@ -110,7 +109,7 @@ def save_image_to_db(conn, file_name, file_path):
     conn.commit()
 
 
-def model_infer(image, save_path) -> dict:
+def model_infer(image, save_path, save_to_json=False) -> dict:
     '''
     Обрабатывает картинку image,
     сохраняет результат в текстовом виде и в виде результирующей картинки в save_path,
@@ -127,18 +126,23 @@ def model_infer(image, save_path) -> dict:
         else:
             elements[name] += 1
 
-    if os.path.isfile(save_path + ".txt"):
-        os.remove(save_path + ".txt")
+    if save_to_json:
+        if os.path.isfile(save_path + ".json"):
+            os.remove(save_path + ".json")
 
-    results[0].save_txt(save_path + ".txt")  # сохраняет тхт в виде id x y w h
+        to_json = results[0].to_json()  # сохраняет тхт в виде id x y w h
+        print(to_json)
+        with open(save_path + ".json", "w") as f:
+            f.write(to_json)
+
     results[0].save(save_path + ".jpg")  # сохраняет картинку с наложенными лейблами
 
     return elements
 
 
-def update_interface_with_yolo(panel, img_path, save_path, elems_textbox):
+def update_interface_with_yolo(panel, img_path, save_path, elems_textbox, save_to_json=False):
     # Запускаем инференс
-    elements = model_infer(img_path, save_path)
+    elements = model_infer(img_path, save_path, save_to_json)
 
     elems_textbox.delete(1.0, END)  # Очищаем предыдущее содержимое
 
@@ -170,7 +174,7 @@ def infer_image(panel, elems_textbox):
     temp_img_path = "temp_image.jpg"
     cv2.imwrite(temp_img_path, img1)  # Сохраняем img1 в файл
 
-    update_interface_with_yolo(panel, temp_img_path, save_path, elems_textbox)
+    update_interface_with_yolo(panel, temp_img_path, save_path, elems_textbox, save_to_json=True)
     
 
 
@@ -489,7 +493,7 @@ def continuous_infer(root, panel, elem_textbox, image_store, camera_index):
         
         last_modified_file = max(files, key=os.path.getmtime) # имя последнего изменявшегося файла
 
-        update_interface_with_yolo(panel, last_modified_file, "result", elem_textbox)
+        update_interface_with_yolo(panel, last_modified_file, "result", elem_textbox, save_to_json=False)
         root.after(refresh_rate, lambda: continuous_infer(root, panel, elem_textbox, image_store, camera_index))
 
 
