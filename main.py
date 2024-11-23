@@ -515,7 +515,6 @@ if __name__ == "__main__":
         continuous_infer=lambda: continuous_infer_handler(root, panel2, output_text, image2, selected_camera.get()),
         load_second_image = lambda: load_second_image(panel2, image2),  # Передача функции загрузки второго изображения
         load_image_from_db=load_image_from_db,
-        start_camera_capture=lambda: start_camera_capture(panel2, image2) #TODO: delete button
     )
     # Запуск основного цикла приложения
     root.mainloop()

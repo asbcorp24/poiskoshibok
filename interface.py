@@ -40,7 +40,7 @@ def get_image_names_from_db():
 
 
 def create_interface(load_image, capture_from_camera, rotate_image_button, compare_images, infer_image_with_yolo,
-                     continuous_infer, load_second_image, load_image_from_db, start_camera_capture):
+                     continuous_infer, load_second_image, load_image_from_db):
     root = ttk.Window(themename="darkly")  # Создаем окно с темной темой
     root.title("Image Processing Application")
     root.geometry("1000x800")  # Задаем размер окна
@@ -73,11 +73,6 @@ def create_interface(load_image, capture_from_camera, rotate_image_button, compa
     btn_capture_camera = ttk.Button(button_frame, text="Сделать фото с камеры", command=capture_from_camera,
                                     **button_style)
     btn_capture_camera.pack(pady=10)
-
-    btn_capture_camera2 = ttk.Button(button_frame, text="Начать захват с камеры",
-                                     command=start_camera_capture,
-                                    **button_style)
-    btn_capture_camera2.pack(pady=10)
     
     # Добавьте комбобокс для загрузки изображения из базы данных
     ttk.Label(button_frame, text="Выбор изображения из базы данных").pack(pady=10)
