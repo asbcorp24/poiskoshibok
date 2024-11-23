@@ -35,13 +35,12 @@ def create_database():
     return conn
 
 def capture_camera_periodically(panel2, image2, save_path, camera_index, for_nn=False):
-    cap = cv2.VideoCapture(int(camera_index.split()[-1]))  # Открыть камеру
-    if not cap.isOpened():
-        print("Не удалось открыть камеру.")
-        return
+    global cam
+    capture_global_camera(camera_index)
+
     
     while True:
-        ret, frame = cap.read()  # Чтение кадра
+        ret, frame = cam.read()  # Чтение кадра
         if not ret:
             print("Не удалось захватить кадр.")
             break
@@ -49,7 +48,7 @@ def capture_camera_periodically(panel2, image2, save_path, camera_index, for_nn=
         # Сохраняем изображение в папку tmpimg
         cv2.imwrite(save_path + "jopa.jpg", frame)
         if for_nn:
-            cap.release()
+            release_global_camera()
             return
 
         # Отображаем изображение в panel2
@@ -63,7 +62,7 @@ def capture_camera_periodically(panel2, image2, save_path, camera_index, for_nn=
 
         time.sleep(5)  # Задержка в 5 секунд
 
-    cap.release()
+    release_global_camera()
 
 def start_camera_capture(panel2, image2):
     # Запуск захвата изображения в отдельном потоке
@@ -254,24 +253,21 @@ def load_second_image(panel,image_store):
 
 def capture_from_camera(panel, image_store, camera_index):
     '''Функция для захвата 20 изображений с камеры и сохранения только последнего.'''
-    cap = cv2.VideoCapture(int(camera_index.split()[-1]))  # Получаем номер камеры
-    
-    if not cap.isOpened():
-        print("Не удалось открыть камеру.")
-        return
+    global cam
+    capture_global_camera(camera_index)
 
     last_frame = None  # Переменная для хранения последнего захваченного кадра
     interested_in_frame_num = 20
 
     for _ in range(interested_in_frame_num):  # Захватываем 20 изображений
-        ret, frame = cap.read()
+        ret, frame = cam.read()
         if ret:
             last_frame = frame  # Сохраняем последний кадр
         else:
             print("Не удалось захватить кадр.")
             break
 
-    cap.release()  # Освобождаем камеру
+    release_global_camera()
 
     if last_frame is not None:
         img_resized = resize_to_fit(last_frame)  # Сжимаем изображение до 640x480
@@ -382,7 +378,17 @@ def compare_images():
 def capture_global_camera(camera_index):
     global cam
 
-    cam = cv2.VideoCapture(int(camera_index.split()[-1]))
+    cam_num = 0
+    
+    if len(camera_index.split()) != 0:
+        cam_num = int(camera_index.split()[-1])
+        print("camera captured")
+        print(cam_num)
+    else:
+        print(f"no camera index provided, using default camera {cam_num}")
+        return
+
+    cam = cv2.VideoCapture(cam_num)
     if not cam.isOpened():
         print("Не удалось открыть камеру.")
         return
@@ -395,15 +401,11 @@ def release_global_camera():
         cam.release()
 
 def capture_global_camera_periodically(panel2, image2, save_path, camera_index, for_nn=False):
-    cap = cv2.VideoCapture(int(camera_index.split()[-1]))  # Открыть камеру
-    if not cap.isOpened():
-        print("Не удалось открыть камеру.")
-        return
-    
-    #TODO: use global camera instead
+    capture_global_camera(camera_index)
+    global cam
 
     while True:
-        ret, frame = cap.read()  # Чтение кадра
+        ret, frame = cam.read()  # Чтение кадра
         if not ret:
             print("Не удалось захватить кадр.")
             break
@@ -411,7 +413,7 @@ def capture_global_camera_periodically(panel2, image2, save_path, camera_index, 
         # Сохраняем изображение в папку tmpimg
         cv2.imwrite(save_path + "jopa.jpg", frame)
         if for_nn:
-            cap.release()
+            release_global_camera()
             return
 
         # Отображаем изображение в panel2
@@ -426,7 +428,7 @@ def capture_global_camera_periodically(panel2, image2, save_path, camera_index, 
         time.sleep(5)  # Задержка в 5 секунд
 
 
-def continuous_infer_handler(root, panel, elem_textbox, image_store, camera_index):
+def continuous_infer_handler(root, panel, elem_textbox, camera_index):
     global cam
     capture_global_camera(camera_index)
 
@@ -512,7 +514,7 @@ if __name__ == "__main__":
         rotate_image_button=rotate_image_button,
         compare_images=compare_images,
         infer_image_with_yolo=lambda: infer_image(panel2, output_text), # Передача функции инференса
-        continuous_infer=lambda: continuous_infer_handler(root, panel2, output_text, image2, selected_camera.get()),
+        continuous_infer=lambda: continuous_infer_handler(root, panel2, output_text, selected_camera.get()),
         load_second_image = lambda: load_second_image(panel2, image2),  # Передача функции загрузки второго изображения
         load_image_from_db=load_image_from_db,
     )
