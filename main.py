@@ -12,13 +12,10 @@ import shutil
 import time
 import threading
 import json
-
+from camera_handle import CameraHandle
 
 model = YOLO("best.onnx", task="detect")
-cam = None
 
-if not os.path.exists('data'):
-    os.makedirs('data')
 
 def create_database():
     '''Создание или подключение к базе данных SQLite'''
@@ -34,10 +31,9 @@ def create_database():
     conn.commit()
     return conn
 
-def capture_camera_periodically(panel2, image2, save_path, camera_index, for_nn=False):
-    global cam
-    capture_global_camera(camera_index)
 
+def capture_camera_periodically(panel2, image2, save_path, camera_index, for_nn=False):
+    cam = CameraHandle().get_cam(camera_index)
     
     while True:
         ret, frame = cam.read()  # Чтение кадра
@@ -48,7 +44,7 @@ def capture_camera_periodically(panel2, image2, save_path, camera_index, for_nn=
         # Сохраняем изображение в папку tmpimg
         cv2.imwrite(save_path + "jopa.jpg", frame)
         if for_nn:
-            release_global_camera()
+            CameraHandle.release_global_camera()
             return
 
         # Отображаем изображение в panel2
@@ -62,13 +58,8 @@ def capture_camera_periodically(panel2, image2, save_path, camera_index, for_nn=
 
         time.sleep(5)  # Задержка в 5 секунд
 
-    release_global_camera()
+    CameraHandle().release_global_camera()
 
-def start_camera_capture(panel2, image2):
-    # Запуск захвата изображения в отдельном потоке
-    print("пошел захват")
-    save_path="tmping/"
-    threading.Thread(target=capture_camera_periodically, args=(panel2, image2, save_path), daemon=True).start()
 
 def get_image_names_from_db():
     '''Функция для получения имен изображений из базы данных'''
@@ -253,8 +244,7 @@ def load_second_image(panel,image_store):
 
 def capture_from_camera(panel, image_store, camera_index):
     '''Функция для захвата 20 изображений с камеры и сохранения только последнего.'''
-    global cam
-    capture_global_camera(camera_index)
+    cam = CameraHandle().get_cam(camera_index)
 
     last_frame = None  # Переменная для хранения последнего захваченного кадра
     interested_in_frame_num = 20
@@ -267,7 +257,7 @@ def capture_from_camera(panel, image_store, camera_index):
             print("Не удалось захватить кадр.")
             break
 
-    release_global_camera()
+    CameraHandle().release_global_camera()
 
     if last_frame is not None:
         img_resized = resize_to_fit(last_frame)  # Сжимаем изображение до 640x480
@@ -375,34 +365,10 @@ def compare_images():
         panel2.image = img_tk_diff
 
 
-def capture_global_camera(camera_index):
-    global cam
 
-    cam_num = 0
-    
-    if len(camera_index.split()) != 0:
-        cam_num = int(camera_index.split()[-1])
-        print("camera captured")
-        print(cam_num)
-    else:
-        print(f"no camera index provided, using default camera {cam_num}")
-        return
-
-    cam = cv2.VideoCapture(cam_num)
-    if not cam.isOpened():
-        print("Не удалось открыть камеру.")
-        return
-
-
-def release_global_camera():
-    global cam
-
-    if cam is not None:
-        cam.release()
 
 def capture_global_camera_periodically(panel2, image2, save_path, camera_index, for_nn=False):
-    capture_global_camera(camera_index)
-    global cam
+    cam = CameraHandle().get_cam(camera_index)
 
     while True:
         ret, frame = cam.read()  # Чтение кадра
@@ -413,7 +379,7 @@ def capture_global_camera_periodically(panel2, image2, save_path, camera_index, 
         # Сохраняем изображение в папку tmpimg
         cv2.imwrite(save_path + "jopa.jpg", frame)
         if for_nn:
-            release_global_camera()
+            CameraHandle().release_global_camera()
             return
 
         # Отображаем изображение в panel2
@@ -429,8 +395,7 @@ def capture_global_camera_periodically(panel2, image2, save_path, camera_index, 
 
 
 def continuous_infer_handler(root, panel, elem_textbox, camera_index):
-    global cam
-    capture_global_camera(camera_index)
+    cam = CameraHandle().get_cam(camera_index)
 
     def update_frame():
         # Read a frame from the camera
@@ -499,7 +464,10 @@ def continuous_infer(root, panel, elem_textbox, image_store, camera_index):
         root.after(refresh_rate, lambda: continuous_infer(root, panel, elem_textbox, image_store, camera_index))
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":    
+    if not os.path.exists('data'):
+        os.makedirs('data')
+
     # Переменные для хранения изображений
     image1 = {"image": None}
     image2 = {"image": None}
