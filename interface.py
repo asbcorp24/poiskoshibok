@@ -1,4 +1,4 @@
-from tkinter import Tk, Label, Frame, Text
+from tkinter import Tk, Label, Frame, Text,Toplevel, Listbox
 import ttkbootstrap as ttk  # Импортируем ttkbootstrap для улучшенных стилей
 import cv2  # Импортируем OpenCV для работы с камерами
 
@@ -37,10 +37,69 @@ def get_image_names_from_db():
     return image_names
 
 
+def open_archive():
+    '''Открывает новое окно с архивом'''
+    archive_window = Toplevel()  # Создаем новое окно
+    archive_window.title("Архив")
+    archive_window.geometry("800x600")
 
+    # Список для отображения записей из базы данных
+    listbox = Listbox(archive_window, height=20, font=('Helvetica', 12))
+    listbox.pack(fill="both", expand=True, padx=10, pady=10)
+
+    # Соединение с базой данных
+    conn = sqlite3.connect('images.db')
+    c = conn.cursor()
+    c.execute('SELECT id, timestamp FROM results')
+    records = c.fetchall()
+    conn.close()
+
+    # Добавление записей в список
+    for record in records:
+        listbox.insert("end", f"ID: {record[0]} | Время: {record[1]}")
+
+    def load_selected_record(event):
+        '''Загружает данные выбранной записи'''
+        selected = listbox.curselection()
+        if not selected:
+            return
+
+        record_index = selected[0]
+        record_id = records[record_index][0]
+
+        # Получение данных из базы данных
+        conn = sqlite3.connect('images.db')
+        c = conn.cursor()
+        c.execute('SELECT json_path, jpg_path FROM results WHERE id = ?', (record_id,))
+        result = c.fetchone()
+        conn.close()
+
+        if result:
+            json_path, jpg_path = result
+
+            # Загрузка и отображение изображения
+            img = cv2.imread(jpg_path)
+            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            img_pil = Image.fromarray(img_rgb)
+            img_tk = ImageTk.PhotoImage(image=img_pil)
+
+            img_label = Label(archive_window, image=img_tk)
+            img_label.image = img_tk  # Сохраняем ссылку
+            img_label.pack()
+
+            # Загрузка и отображение содержимого JSON
+            with open(json_path, "r") as f:
+                json_content = f.read()
+
+            json_label = Text(archive_window, height=10, wrap="word", font=('Helvetica', 12))
+            json_label.insert("1.0", json_content)
+            json_label.pack()
+
+    # Обработчик выбора записи
+    listbox.bind("<<ListboxSelect>>", load_selected_record)
 
 def create_interface(load_image, capture_from_camera, rotate_image_button, compare_images, infer_image_with_yolo,
-                     continuous_infer, load_second_image, load_image_from_db):
+                     continuous_infer, load_second_image, load_image_from_db, open_archive):
     root = ttk.Window(themename="darkly")  # Создаем окно с темной темой
     root.title("Image Processing Application")
     root.geometry("1000x800")  # Задаем размер окна
@@ -100,7 +159,9 @@ def create_interface(load_image, capture_from_camera, rotate_image_button, compa
     btn_cont_infer = ttk.Button(button_frame, text="Инференс в реальном времени", command=continuous_infer, **button_style)
     btn_cont_infer.pack(pady=10)
 
-
+    # Кнопка для открытия архива
+    btn_open_archive = ttk.Button(button_frame, text="Архив", command=open_archive, **button_style)
+    btn_open_archive.pack(pady=10)
     # Кнопка выхода внизу
     btn_exit = ttk.Button(button_frame, text="Выйти", command=root.quit, **button_style)
     btn_exit.pack(pady=10, side="bottom")

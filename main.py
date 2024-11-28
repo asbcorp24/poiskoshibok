@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageTk
 import math
-from tkinter import filedialog, Tk  # Импортируйте filedialog и Tk из tkinter
+from tkinter import filedialog,  Toplevel, Listbox, Text  # Импортируйте filedialog и Tk из tkinter
 from interface import create_interface
 from tkinter import  END
 import os
@@ -13,7 +13,7 @@ import time
 import threading
 import json
 from camera_handle import CameraHandle
-
+from interface import open_archive
 model = YOLO("best.onnx", task="detect")
 
 
@@ -21,6 +21,8 @@ def create_database():
     '''Создание или подключение к базе данных SQLite'''
     conn = sqlite3.connect('images.db')
     c = conn.cursor()
+
+    # Создание таблицы для изображений
     c.execute('''
         CREATE TABLE IF NOT EXISTS images (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -28,6 +30,17 @@ def create_database():
             file_path TEXT NOT NULL
         )
     ''')
+
+    # Создание таблицы для результатов инференса
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            json_path TEXT NOT NULL,
+            jpg_path TEXT NOT NULL,
+            timestamp TEXT NOT NULL
+        )
+    ''')
+
     conn.commit()
     return conn
 
@@ -99,10 +112,28 @@ def save_image_to_db(conn, file_name, file_path):
     conn.commit()
 
 
-def model_infer(image, save_path, save_to_json=False) -> dict:
+def generate_unique_filename(directory, prefix, extension):
+    '''
+    Генерирует уникальное имя файла.
+    directory: директория для сохранения файла.
+    prefix: префикс имени файла.
+    extension: расширение файла (например, ".jpg").
+    '''
+    timestamp = time.strftime("%Y%m%d_%H%M%S")  # Текущая дата и время
+    counter = 1
+    unique_name = f"{prefix}_{timestamp}{extension}"
+
+    while os.path.exists(os.path.join(directory, unique_name)):
+        unique_name = f"{prefix}_{timestamp}_{counter}{extension}"
+        counter += 1
+
+    return unique_name
+
+
+def model_infer(image, save_directory, save_to_json=False) -> dict:
     '''
     Обрабатывает картинку image,
-    сохраняет результат в текстовом виде и в виде результирующей картинки в save_path,
+    сохраняет результат в текстовом виде и в виде результирующей картинки в save_directory,
     возвращает словарь Имя элемента -> количество штук на картинке
     '''
     results = model(image)
@@ -116,18 +147,33 @@ def model_infer(image, save_path, save_to_json=False) -> dict:
         else:
             elements[name] += 1
 
-    if save_to_json:
-        if os.path.isfile(save_path + ".json"):
-            os.remove(save_path + ".json")
+    # Генерация уникальных имён для JSON и JPG
+    json_filename = generate_unique_filename(save_directory, "result", ".json")
+    jpg_filename = generate_unique_filename(save_directory, "result", ".jpg")
 
-        to_json = results[0].to_json()  # сохраняет тхт в виде id x y w h
-        print(to_json)
-        with open(save_path + ".json", "w") as f:
+    json_path = os.path.join(save_directory, json_filename)
+    jpg_path = os.path.join(save_directory, jpg_filename)
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")  # Текущая дата и время
+
+    # Сохранение JSON
+    if save_to_json:
+        to_json = results[0].to_json()  # Сохраняет в текстовом виде id, x, y, w, h
+        with open(json_path, "w") as f:
             f.write(to_json)
 
-    results[0].save(save_path + ".jpg")  # сохраняет картинку с наложенными лейблами
+    # Сохранение JPG
+    results[0].save(jpg_path)  # Сохраняет картинку с наложенными лейблами
+
+    # Сохранение путей и времени в базу данных
+    conn = create_database()  # Получение подключения к базе данных
+    c = conn.cursor()
+    c.execute('INSERT INTO results (json_path, jpg_path, timestamp) VALUES (?, ?, ?)',
+              (json_path, jpg_path, timestamp))
+    conn.commit()
+    conn.close()
 
     return elements
+
 
 
 def update_interface_with_yolo(panel, img_path, save_path, elems_textbox, save_to_json=False):
@@ -485,6 +531,7 @@ if __name__ == "__main__":
         continuous_infer=lambda: continuous_infer_handler(root, panel2, output_text, selected_camera.get()),
         load_second_image = lambda: load_second_image(panel2, image2),  # Передача функции загрузки второго изображения
         load_image_from_db=load_image_from_db,
+        open_archive=open_archive  # Передача функции для открытия архива
     )
     # Запуск основного цикла приложения
     root.mainloop()
