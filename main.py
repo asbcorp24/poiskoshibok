@@ -371,12 +371,37 @@ def find_differences(img1, img2):
 
     return img_with_differences
 
+def align_images(img1, img2):
+    """Выровнять img2 относительно img1 с использованием ORB"""
+    orb = cv2.ORB_create()
+
+    # Обнаружение ключевых точек и дескрипторов
+    kp1, des1 = orb.detectAndCompute(img1, None)
+    kp2, des2 = orb.detectAndCompute(img2, None)
+
+    # Сопоставление точек
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+    matches = bf.match(des1, des2)
+    matches = sorted(matches, key=lambda x: x.distance)
+
+    # Получение точек для вычисления матрицы преобразования
+    src_pts = np.float32([kp1[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
+    dst_pts = np.float32([kp2[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
+
+    # Нахождение матрицы гомографии
+    M, mask = cv2.findHomography(dst_pts, src_pts, cv2.RANSAC, 5.0)
+    height, width = img1.shape[:2]
+    aligned_img = cv2.warpPerspective(img2, M, (width, height))
+    return aligned_img
 
 def rotate_image_button():
     '''Функция для поворота изображения второго изображения'''
     img2 = image2["image"]
-
+    img1 = image1["image"]
     if img2 is not None:
+
+        align_images(img1,img2);
+
         # Поворот второго изображения по наибольшей линии
         angle, best_line = find_rotation_angle(img2)
         if best_line:
