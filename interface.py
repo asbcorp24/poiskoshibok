@@ -1,13 +1,62 @@
-from tkinter import Tk, Label, Frame, Text,Toplevel, Listbox
+from tkinter import Tk, Label, Frame, Text,Toplevel, Listbox, Button
 import ttkbootstrap as ttk  # Импортируем ttkbootstrap для улучшенных стилей
 import cv2  # Импортируем OpenCV для работы с камерами
 
 import sqlite3  # Импортируем sqlite3 для работы с базой данных
 from PIL import Image, ImageTk  # Импортируем PIL для работы с изображениями
+from mail import send_json_with_chart  # Импорт функции отправки почты
+import sqlite3
 
 import os
 import time
 import threading
+
+
+def send_selected_result():
+    """Открывает окно для выбора строки из results и отправки данных по почте."""
+    send_window = Toplevel()
+    send_window.title("Выбор строки для отправки")
+    send_window.geometry("600x800")
+
+    # Список записей
+    listbox = Listbox(send_window, height=20, font=('Helvetica', 12))
+    listbox.pack(fill="both", expand=True, padx=10, pady=10)
+
+    conn = sqlite3.connect('images.db')
+    c = conn.cursor()
+    c.execute('SELECT id, json_path, jpg_path FROM results')
+    records = c.fetchall()
+    conn.close()
+
+    for record in records:
+        listbox.insert("end", f"ID: {record[0]} | JSON: {record[1]} | JPG: {record[2]}")
+
+    def send_email_action():
+        """Отправляет выбранную строку на почту."""
+        selected = listbox.curselection()
+        if not selected:
+            print("Ничего не выбрано")
+            return
+
+        record_index = selected[0]
+        record = records[record_index]
+
+        json_path = record[1]
+        jpg_path = record[2]
+
+        if not os.path.exists(json_path) or not os.path.exists(jpg_path):
+            print("Файлы не найдены")
+            return
+
+        try:
+            send_json_with_chart(json_path, jpg_path)
+        except Exception as e:
+            print(f"Ошибка: {e}")
+
+    send_button = Button(send_window, text="Отправить", command=send_email_action)
+    send_button.pack(pady=10)
+
+
 
 def get_camera_list():
     '''Получаем список доступных камер'''
@@ -181,5 +230,8 @@ def create_interface(load_image, capture_from_camera, rotate_image_button, compa
 
     panel2 = Label(image_frame, bg='#0D1B2A', bd=2, relief='solid', width=640,height=480)  # Для второго изображения или различий с рамкой
     panel2.pack(side="right", padx=10, pady=10, expand=True)
+    # Добавляем кнопку для отправки данных по почте
+    btn_send_email = ttk.Button(button_frame, text="Отправить результат по почте", command=send_selected_result, **button_style)
+    btn_send_email.pack(pady=10)
 
     return root, panel1, panel2, output_text, selected_camera

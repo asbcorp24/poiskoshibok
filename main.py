@@ -40,6 +40,16 @@ def create_database():
             timestamp TEXT NOT NULL
         )
     ''')
+    # Добавление демонстрационных данных
+    # demo_json_path = 'result/result_20241215_173011.json'
+    # demo_jpg_path = 'result/temp_image.jpg'
+    # demo_timestamp = '2024-12-15 17:30:11'
+    #
+    # c.execute('''
+    #           INSERT INTO results (json_path, jpg_path, timestamp)
+    #           VALUES (?, ?, ?)
+    #       ''', (demo_json_path, demo_jpg_path, demo_timestamp))
+    # print("Демонстрационные данные успешно добавлены в таблицу results.")
 
     conn.commit()
     return conn
@@ -538,7 +548,7 @@ def continuous_infer(root, panel, elem_textbox, image_store, camera_index):
 if __name__ == "__main__":    
     if not os.path.exists('data'):
         os.makedirs('data')
-
+    create_database();
     # Переменные для хранения изображений
     image1 = {"image": None}
     image2 = {"image": None}

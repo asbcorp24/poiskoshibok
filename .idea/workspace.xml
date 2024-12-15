@@ -4,11 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c8ec1640-94db-47b5-86b4-c3165050b81a" name="Changes" comment="виртуаьная среда">
+    <list default="true" id="c8ec1640-94db-47b5-86b4-c3165050b81a" name="Changes" comment="поворачиваекм">
+      <change afterPath="$PROJECT_DIR$/.env" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mail.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.venv/Lib/site-packages/cv2/cv2.pyd" beforeDir="false" afterPath="$PROJECT_DIR$/.venv/Lib/site-packages/cv2/cv2.pyd" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.venv/Lib/site-packages/cv2/typing/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/.venv/Lib/site-packages/cv2/typing/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.venv/Lib/site-packages/cv2/version.py" beforeDir="false" afterPath="$PROJECT_DIR$/.venv/Lib/site-packages/cv2/version.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/interface.py" beforeDir="false" afterPath="$PROJECT_DIR$/interface.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
     </list>
@@ -50,16 +49,16 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python.main.executor": "Run",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "master",
-    "last_opened_file_path": "D:/bnd2-manager-main/src/poiskoshibok",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;last_opened_file_path&quot;: &quot;E:/pyproject/vkbot&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;advanced.settings&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="D:\bnd2-manager-main\src\poiskoshibok" />
@@ -137,7 +136,23 @@
       <option name="project" value="LOCAL" />
       <updated>1729442673689</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="база для json">
+      <option name="closed" value="true" />
+      <created>1732817116516</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1732817116516</updated>
+    </task>
+    <task id="LOCAL-00006" summary="поворачиваекм">
+      <option name="closed" value="true" />
+      <created>1732818179190</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1732818179190</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -157,19 +172,16 @@
     <MESSAGE value="4" />
     <MESSAGE value="Добавлены поворт, загрузка с камеры" />
     <MESSAGE value="виртуаьная среда" />
-    <option name="LAST_COMMIT_MESSAGE" value="виртуаьная среда" />
+    <MESSAGE value="база для json" />
+    <MESSAGE value="поворачиваекм" />
+    <option name="LAST_COMMIT_MESSAGE" value="поворачиваекм" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
-          <line>20</line>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>207</line>
+          <line>263</line>
           <option name="timeStamp" value="5" />
         </line-breakpoint>
       </breakpoints>
