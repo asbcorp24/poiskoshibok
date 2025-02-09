@@ -122,7 +122,7 @@ def save_image_to_db(conn, file_name, file_path):
     conn.commit()
 
 
-def generate_unique_filename(directory, prefix, extension):
+def generate_unique_filename_with_ext(directory, prefix, extension):
     '''
     Генерирует уникальное имя файла.
     directory: директория для сохранения файла.
@@ -158,8 +158,8 @@ def model_infer(image, save_directory, save_to_json=False) -> dict:
             elements[name] += 1
 
     # Генерация уникальных имён для JSON и JPG
-    json_filename = generate_unique_filename(save_directory, "result", ".json")
-    jpg_filename = generate_unique_filename(save_directory, "result", ".jpg")
+    json_filename = generate_unique_filename_with_ext(save_directory, "result", ".json")
+    jpg_filename = generate_unique_filename_with_ext(save_directory, "result", ".jpg")
 
     json_path = os.path.join(save_directory, json_filename)
     jpg_path = os.path.join(save_directory, jpg_filename)
@@ -197,7 +197,10 @@ def update_interface_with_yolo(panel, img_path, save_path, elems_textbox, save_t
         elems_textbox.insert(END, f"{key}: {str(value)}\n")  # Вставляем новые данные
 
     # Загрузка обработанного изображения и вывод на экран
-    img_with_labels = cv2.imread(save_path + ".jpg")
+    files = ["result/"+x for x in os.listdir("result/") if x.endswith(".jpg")] 
+    last_modified_file = max(files, key=os.path.getmtime)
+
+    img_with_labels = cv2.imread(last_modified_file)
     img_resized = cv2.resize(img_with_labels, (700, 600))  # Сжимаем изображение для отображения в panel2
     img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
     img_pil = Image.fromarray(img_rgb)
@@ -381,6 +384,7 @@ def find_differences(img1, img2):
 
     return img_with_differences
 
+
 def align_images(img1, img2):
     """Выровнять img2 относительно img1 с использованием ORB"""
     orb = cv2.ORB_create()
@@ -403,6 +407,7 @@ def align_images(img1, img2):
     height, width = img1.shape[:2]
     aligned_img = cv2.warpPerspective(img2, M, (width, height))
     return aligned_img
+
 
 def rotate_image_button():
     '''Функция для поворота изображения второго изображения'''
@@ -444,8 +449,6 @@ def compare_images():
         # Обновляем панель для отображения различий
         panel2.config(image=img_tk_diff)
         panel2.image = img_tk_diff
-
-
 
 
 def capture_global_camera_periodically(panel2, image2, save_path, camera_index, for_nn=False):
@@ -523,26 +526,6 @@ def continuous_infer_handler(root, panel, elem_textbox, camera_index):
         root.after(100, update_frame)  # Update every 100 ms
 
     update_frame()  # Start the frame update loop
-
-
-def continuous_infer(root, panel, elem_textbox, image_store, camera_index):
-    '''Получение изображений в реальном времени и обработка'''
-    global is_continuous_infer
-    global refresh_rate
-
-    if is_continuous_infer:
-        folder_path = 'tmpimg/' # подставить имя нужного фолдера
-        capture_global_camera_periodically(panel2, image2, folder_path, camera_index, for_nn=True)
-
-        files = [os.path.join(folder_path, f) for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
-    
-        if not files:
-            return None
-        
-        last_modified_file = max(files, key=os.path.getmtime) # имя последнего изменявшегося файла
-
-        update_interface_with_yolo(panel, last_modified_file, "result", elem_textbox, save_to_json=False)
-        root.after(refresh_rate, lambda: continuous_infer(root, panel, elem_textbox, image_store, camera_index))
 
 
 if __name__ == "__main__":    
