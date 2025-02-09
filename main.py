@@ -14,8 +14,10 @@ import threading
 import json
 from camera_handle import CameraHandle
 from interface import open_archive
+
 model = YOLO("best.onnx", task="detect")
 
+is_continuous_infer = False
 
 def create_database():
     '''Создание или подключение к базе данных SQLite'''
@@ -415,7 +417,7 @@ def rotate_image_button():
     img1 = image1["image"]
     if img2 is not None:
 
-        align_images(img1,img2);
+        align_images(img1,img2)
 
         # Поворот второго изображения по наибольшей линии
         angle, best_line = find_rotation_angle(img2)
@@ -451,35 +453,10 @@ def compare_images():
         panel2.image = img_tk_diff
 
 
-def capture_global_camera_periodically(panel2, image2, save_path, camera_index, for_nn=False):
-    cam = CameraHandle().get_cam(camera_index)
-
-    while True:
-        ret, frame = cam.read()  # Чтение кадра
-        if not ret:
-            print("Не удалось захватить кадр.")
-            break
-
-        # Сохраняем изображение в папку tmpimg
-        cv2.imwrite(save_path + "jopa.jpg", frame)
-        if for_nn:
-            CameraHandle().release_global_camera()
-            return
-
-        # Отображаем изображение в panel2
-        image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-        image = image.resize((panel2.winfo_width(), panel2.winfo_height()), Image.LANCZOS)
-
-        image2["image"] = image
-        img_tk = ImageTk.PhotoImage(image)
-        panel2.config(image=img_tk)
-        panel2.image = img_tk  # Сохраняем ссылку на изображение
-
-        time.sleep(5)  # Задержка в 5 секунд
-
-
 def continuous_infer_handler(root, panel, elem_textbox, camera_index):
-    cam = CameraHandle().get_cam(camera_index)
+    global is_continuous_infer
+
+    is_continuous_infer = not is_continuous_infer
 
     def update_frame():
         # Read a frame from the camera
@@ -523,21 +500,25 @@ def continuous_infer_handler(root, panel, elem_textbox, camera_index):
         panel.image = img_tk  # Keep a reference to avoid garbage collection
 
         # Call this function again after a short delay
-        root.after(100, update_frame)  # Update every 100 ms
+        if is_continuous_infer:
+            root.after(100, update_frame)  # Update every 100 ms
 
-    update_frame()  # Start the frame update loop
+
+    if is_continuous_infer:
+        cam = CameraHandle().get_cam(camera_index)
+        update_frame()  # Start the frame update loop
+    else:
+        CameraHandle().release_global_camera()
+        #print_jopa()
 
 
 if __name__ == "__main__":    
     if not os.path.exists('data'):
         os.makedirs('data')
-    create_database();
+    create_database()
     # Переменные для хранения изображений
     image1 = {"image": None}
     image2 = {"image": None}
-
-    is_continuous_infer = False
-    refresh_rate = 3000 # in ms
 
     # Создание интерфейса
     root, panel1, panel2, output_text, selected_camera = create_interface(
