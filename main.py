@@ -14,8 +14,13 @@ import threading
 import json
 from camera_handle import CameraHandle
 from interface import open_archive
+from anomalib.models import WinClip
+from anomalib.engine import Engine
 
-model = YOLO("best.onnx", task="detect")
+yolo_model = YOLO("best.onnx", task="detect")
+winclip_engine = Engine(task="segmentation")
+winclip_model = WinClip.load_from_checkpoint("winclip_model.ckpt")
+
 
 is_continuous_infer = False
 
@@ -148,7 +153,7 @@ def model_infer(image, save_directory, save_to_json=False) -> dict:
     сохраняет результат в текстовом виде и в виде результирующей картинки в save_directory,
     возвращает словарь Имя элемента -> количество штук на картинке
     '''
-    results = model(image)
+    results = yolo_model(image)
     res = results[0]
 
     elements = dict()
@@ -468,7 +473,7 @@ def continuous_infer_handler(root, panel, elem_textbox, camera_index):
             return
         
         # Process the frame with the YOLO model
-        results = model(frame)
+        results = yolo_model(frame)
 
         ''''''
         res = results[0]
@@ -512,6 +517,20 @@ def continuous_infer_handler(root, panel, elem_textbox, camera_index):
         #print_jopa()
 
 
+def diff_heatmap(panel):
+    img1 = image1["image"]
+    
+    if img1 is None:
+        print("Нет изображения для обработки")
+        return
+
+    img_to_infer = [img1]
+    preds = winclip_engine.predict(winclip_model, dataloaders=img_to_infer)
+
+    print(type(preds))
+
+
+
 if __name__ == "__main__":    
     if not os.path.exists('data'):
         os.makedirs('data')
@@ -530,7 +549,8 @@ if __name__ == "__main__":
         continuous_infer=lambda: continuous_infer_handler(root, panel2, output_text, selected_camera.get()),
         load_second_image = lambda: load_second_image(panel2, image2),  # Передача функции загрузки второго изображения
         load_image_from_db=load_image_from_db,
-        open_archive=open_archive  # Передача функции для открытия архива
+        open_archive=open_archive,  # Передача функции для открытия архива
+        diff_heatmap=lambda: diff_heatmap(panel2)
     )
     # Запуск основного цикла приложения
     root.mainloop()

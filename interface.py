@@ -148,7 +148,7 @@ def open_archive():
     listbox.bind("<<ListboxSelect>>", load_selected_record)
 
 def create_interface(load_image, capture_from_camera, rotate_image_button, compare_images, infer_image_with_yolo,
-                     continuous_infer, load_second_image, load_image_from_db, open_archive):
+                     continuous_infer, load_second_image, load_image_from_db, open_archive, diff_heatmap):
     root = ttk.Window(themename="darkly")  # Создаем окно с темной темой
     root.title("Image Processing Application")
     root.geometry("1000x800")  # Задаем размер окна
@@ -211,6 +211,10 @@ def create_interface(load_image, capture_from_camera, rotate_image_button, compa
     # Кнопка для открытия архива
     btn_open_archive = ttk.Button(button_frame, text="Архив", command=open_archive, **button_style)
     btn_open_archive.pack(pady=10)
+
+    btn_diff_heatmap = ttk.Button(button_frame, text="Карта различий", command=diff_heatmap, **button_style)
+    btn_diff_heatmap.pack(pady=10)
+
     # Кнопка выхода внизу
     btn_exit = ttk.Button(button_frame, text="Выйти", command=root.quit, **button_style)
     btn_exit.pack(pady=10, side="bottom")
