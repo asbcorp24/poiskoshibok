@@ -3,16 +3,15 @@ import cv2
 import numpy as np
 from PIL import Image, ImageTk
 import math
-from tkinter import filedialog,  Toplevel, Listbox, Text  # Импортируйте filedialog и Tk из tkinter
+from tkinter import filedialog
 from interface import create_interface
 from tkinter import  END
 import os
 import sqlite3
 import shutil
 import time
-import threading
-import json
 from camera_handle import CameraHandle
+import winclip
 from interface import open_archive
 from anomalib.models import WinClip
 from anomalib.engine import Engine
@@ -20,6 +19,7 @@ from anomalib.engine import Engine
 yolo_model = YOLO("best.onnx", task="detect")
 winclip_engine = Engine(task="segmentation")
 winclip_model = WinClip.load_from_checkpoint("winclip_model.ckpt")
+winclip_model.to("cpu")
 
 
 is_continuous_infer = False
@@ -524,10 +524,34 @@ def diff_heatmap(panel):
         print("Нет изображения для обработки")
         return
 
-    img_to_infer = [img1]
-    preds = winclip_engine.predict(winclip_model, dataloaders=img_to_infer)
+    tmp_file = "winclip/temp_image.jpg"
+    cv2.imwrite(tmp_file, img1)
 
-    print(type(preds))
+    rets = winclip_engine.predict(winclip_model, data_path=tmp_file, return_predictions=True)
+
+    shutil.rmtree("results")
+
+    result = rets[0]
+
+    anomaly_map_tensor = result['anomaly_maps'][0]
+    anomaly_map_np = anomaly_map_tensor.squeeze().numpy()
+    anomaly_map_np = (anomaly_map_np - anomaly_map_np.min()) / (anomaly_map_np.max() - anomaly_map_np.min())
+    heatmap = cv2.applyColorMap((anomaly_map_np * 255).astype(np.uint8), cv2.COLORMAP_JET)
+
+    image_np = cv2.imread(tmp_file)
+    image_np = cv2.resize(image_np, (600, 600))
+
+    heatmap = cv2.resize(heatmap, (600, 600))  # Сжимаем изображение для отображения в panel2
+    overlay = cv2.addWeighted(image_np, 0.5, heatmap, 0.5, 0)
+
+    img_rgb = cv2.cvtColor(overlay, cv2.COLOR_BGR2RGB)
+    img_pil = Image.fromarray(img_rgb)
+    img_tk = ImageTk.PhotoImage(image=img_pil)
+
+    panel.config(image=img_tk)
+    panel.image = img_tk
+
+    os.remove(tmp_file)
 
 
 
