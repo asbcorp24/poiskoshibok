@@ -3,9 +3,9 @@ import cv2
 import numpy as np
 from PIL import Image, ImageTk
 import math
-from tkinter import filedialog
+from tkinter import filedialog, END
+import tkinter as tk
 from interface import create_interface
-from tkinter import  END
 import os
 import sqlite3
 import shutil
@@ -15,6 +15,7 @@ import winclip
 from interface import open_archive
 from anomalib.models import WinClip
 from anomalib.engine import Engine
+from ttkthemes import ThemedTk
 
 yolo_model = YOLO("best.onnx", task="detect")
 winclip_engine = Engine(task="segmentation")
@@ -554,27 +555,48 @@ def diff_heatmap(panel):
     os.remove(tmp_file)
 
 
-
-if __name__ == "__main__":    
+if __name__ == "__main__":
     if not os.path.exists('data'):
         os.makedirs('data')
     create_database()
-    # Переменные для хранения изображений
+
     image1 = {"image": None}
     image2 = {"image": None}
 
-    # Создание интерфейса
-    root, panel1, panel2, output_text, selected_camera = create_interface(
+    # Create the main application window with a dark theme
+    mainRoot = ThemedTk(theme="equilux")  # Use a dark theme
+    mainRoot.title("Tabbed Application")
+
+    # Apply dark theme to all widgets
+    style = tk.ttk.Style(mainRoot)
+    style.theme_use("equilux")  # Set the theme
+
+    # Create a Notebook (tabbed interface)
+    notebook = tk.ttk.Notebook(mainRoot)
+    notebook.pack(fill="both", expand=True)
+
+    # Create two frames for the tabs
+    frame1 = tk.ttk.Frame(notebook)
+    frame2 = tk.ttk.Frame(notebook)
+
+    # Add the frames to the notebook as tabs
+    notebook.add(frame1, text="Tab 1")
+    notebook.add(frame2, text="Tab 2")
+
+    # Create the interface inside frame1
+    panel1, panel2, output_text, selected_camera = create_interface(
+        frame1,
         load_image=lambda: load_image(panel1, image1),
         capture_from_camera=lambda: capture_from_camera(panel1, image1, selected_camera.get()),
         rotate_image_button=rotate_image_button,
         compare_images=compare_images,
-        infer_image_with_yolo=lambda: infer_image(panel2, output_text), # Передача функции инференса
-        continuous_infer=lambda: continuous_infer_handler(root, panel2, output_text, selected_camera.get()),
-        load_second_image = lambda: load_second_image(panel2, image2),  # Передача функции загрузки второго изображения
+        infer_image_with_yolo=lambda: infer_image(panel2, output_text),
+        continuous_infer=lambda: continuous_infer_handler(mainRoot, panel2, output_text, selected_camera.get()),
+        load_second_image=lambda: load_second_image(panel2, image2),
         load_image_from_db=load_image_from_db,
-        open_archive=open_archive,  # Передача функции для открытия архива
+        open_archive=open_archive,
         diff_heatmap=lambda: diff_heatmap(panel2)
     )
-    # Запуск основного цикла приложения
-    root.mainloop()
+
+    # Run the application
+    mainRoot.mainloop()

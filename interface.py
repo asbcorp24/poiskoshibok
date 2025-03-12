@@ -147,21 +147,17 @@ def open_archive():
     # Обработчик выбора записи
     listbox.bind("<<ListboxSelect>>", load_selected_record)
 
-def create_interface(load_image, capture_from_camera, rotate_image_button, compare_images, infer_image_with_yolo,
+def create_interface(parent, load_image, capture_from_camera, rotate_image_button, compare_images, infer_image_with_yolo,
                      continuous_infer, load_second_image, load_image_from_db, open_archive, diff_heatmap):
-    root = ttk.Window(themename="darkly")  # Создаем окно с темной темой
-    root.title("Image Processing Application")
-    root.geometry("1000x800")  # Задаем размер окна
-
-    # Создаем основной фрейм для всего контента
-    main_frame = ttk.Frame(root)
+    # Create the main frame for all content
+    main_frame = ttk.Frame(parent)
     main_frame.pack(fill="both", expand=True)
 
-    # Создаем фрейм для панели кнопок справа
+    # Create a frame for the button panel on the right
     button_frame = ttk.Frame(main_frame)
     button_frame.pack(side="right", fill="y", padx=10, pady=10)
 
-    # Первый блок: Выбор камеры и загрузка изображений
+    # First block: Camera selection and image loading
     ttk.Label(button_frame, text="Выбор камеры и изображений").pack(pady=10)
     camera_list = get_camera_list()
     selected_camera = ttk.Combobox(button_frame, values=camera_list, state="readonly", font=('Helvetica', 12))
@@ -169,8 +165,8 @@ def create_interface(load_image, capture_from_camera, rotate_image_button, compa
     if selected_camera.get() != "":
         selected_camera.current(0)
 
-    # Кнопки с закругленными углами
-    button_style = {"bootstyle": "primary-outline", "width": 20}  # Используем стиль с закругленными углами
+    # Buttons with rounded corners
+    button_style = {"bootstyle": "primary-outline", "width": 20}
     btn_load_image = ttk.Button(button_frame, text="Загрузить изображение", command=load_image, **button_style)
     btn_load_image.pack(pady=10)
 
@@ -181,19 +177,19 @@ def create_interface(load_image, capture_from_camera, rotate_image_button, compa
     btn_capture_camera = ttk.Button(button_frame, text="Сделать фото с камеры", command=capture_from_camera,
                                     **button_style)
     btn_capture_camera.pack(pady=10)
-    
-    # Добавьте комбобокс для загрузки изображения из базы данных
-    ttk.Label(button_frame, text="Выбор изображения из базы данных").pack(pady=10)
-    image_names = get_image_names_from_db()  # Получите список имен изображений из базы данных
 
+    # Add a combobox for loading images from the database
+    ttk.Label(button_frame, text="Выбор изображения из базы данных").pack(pady=10)
+    image_names = get_image_names_from_db()
     selected_image = ttk.Combobox(button_frame, values=image_names, state="readonly", font=('Helvetica', 12))
     selected_image.pack(pady=10)
 
-    # Кнопка для загрузки изображения из комбобокса
+    # Button to load an image from the combobox
     btn_load_from_db = ttk.Button(button_frame, text="Загрузить из базы данных",
                                   command=lambda: load_image_from_db(selected_image.get(), panel1), **button_style)
     btn_load_from_db.pack(pady=10)
-    # Второй блок: Обработка изображений
+
+    # Second block: Image processing
     ttk.Label(button_frame, text="Обработка изображений").pack(pady=10)
     btn_rotate_image = ttk.Button(button_frame, text="Повернуть изображение", command=rotate_image_button,
                                   **button_style)
@@ -208,34 +204,35 @@ def create_interface(load_image, capture_from_camera, rotate_image_button, compa
     btn_cont_infer = ttk.Button(button_frame, text="Инференс в реальном времени", command=continuous_infer, **button_style)
     btn_cont_infer.pack(pady=10)
 
-    # Кнопка для открытия архива
+    # Button to open the archive
     btn_open_archive = ttk.Button(button_frame, text="Архив", command=open_archive, **button_style)
     btn_open_archive.pack(pady=10)
 
     btn_diff_heatmap = ttk.Button(button_frame, text="Карта различий", command=diff_heatmap, **button_style)
     btn_diff_heatmap.pack(pady=10)
 
-    # Кнопка выхода внизу
-    btn_exit = ttk.Button(button_frame, text="Выйти", command=root.quit, **button_style)
+    # Exit button at the bottom
+    btn_exit = ttk.Button(button_frame, text="Выйти", command=parent.quit, **button_style)
     btn_exit.pack(pady=10, side="bottom")
 
-    # Создаем текстовое поле для вывода данных снизу
+    # Create a text box for output at the bottom
     output_text = Text(main_frame, height=5, width=30, bg='#1B263B', fg='white', font=('Helvetica', 12), bd=2,
                        relief='solid')
     output_text.pack(side="bottom", fill="x", padx=10, pady=10)
 
-    # Создаем фрейм для отображения изображений слева и справа
+    # Create a frame for displaying images on the left and right
     image_frame = ttk.Frame(main_frame)
     image_frame.pack(side="left", fill="both", expand=True, padx=10, pady=10)
 
-    # Панели для отображения изображений с границами
-    panel1 = Label(image_frame, bg='#0D1B2A', bd=2, relief='solid')  # Для первого изображения с рамкой
+    # Panels for displaying images with borders
+    panel1 = Label(image_frame, bg='#0D1B2A', bd=2, relief='solid')  # For the first image with a border
     panel1.pack(side="left", padx=10, pady=10, expand=True)
 
-    panel2 = Label(image_frame, bg='#0D1B2A', bd=2, relief='solid', width=640,height=480)  # Для второго изображения или различий с рамкой
+    panel2 = Label(image_frame, bg='#0D1B2A', bd=2, relief='solid', width=640, height=480)  # For the second image or differences with a border
     panel2.pack(side="right", padx=10, pady=10, expand=True)
-    # Добавляем кнопку для отправки данных по почте
+
+    # Add a button to send data via email
     btn_send_email = ttk.Button(button_frame, text="Отправить результат по почте", command=send_selected_result, **button_style)
     btn_send_email.pack(pady=10)
 
-    return root, panel1, panel2, output_text, selected_camera
+    return panel1, panel2, output_text, selected_camera
