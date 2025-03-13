@@ -148,7 +148,7 @@ def open_archive():
     listbox.bind("<<ListboxSelect>>", load_selected_record)
 
 def create_interface(parent, load_image, capture_from_camera, rotate_image_button, compare_images, infer_image_with_yolo,
-                     continuous_infer, load_second_image, load_image_from_db, open_archive, diff_heatmap):
+                     continuous_infer, load_second_image, load_image_from_db, open_archive, diff_heatmap, ocr):
     # Create the main frame for all content
     main_frame = ttk.Frame(parent)
     main_frame.pack(fill="both", expand=True)
@@ -210,6 +210,9 @@ def create_interface(parent, load_image, capture_from_camera, rotate_image_butto
 
     btn_diff_heatmap = ttk.Button(button_frame, text="Карта различий", command=diff_heatmap, **button_style)
     btn_diff_heatmap.pack(pady=10)
+
+    btn_ocr = ttk.Button(button_frame, text="Найти текст", command=ocr, **button_style)
+    btn_ocr.pack(pady=10)
 
     # Exit button at the bottom
     btn_exit = ttk.Button(button_frame, text="Выйти", command=parent.quit, **button_style)

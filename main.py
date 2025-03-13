@@ -16,6 +16,8 @@ from interface import open_archive
 from anomalib.models import WinClip
 from anomalib.engine import Engine
 from ttkthemes import ThemedTk
+import easyocr
+
 
 yolo_model = YOLO("best.onnx", task="detect")
 winclip_engine = Engine(task="segmentation")
@@ -555,6 +557,22 @@ def diff_heatmap(panel):
     os.remove(tmp_file)
 
 
+def ocr(output_text):
+    img1 = image1["image"]
+    
+    if img1 is None:
+        print("Нет изображения для обработки")
+        return
+
+    reader = easyocr.Reader(['en'])
+    text = reader.readtext(img1, decoder="beamsearch", detail=0)
+
+    output_text.delete(1.0, END)
+
+    for x in text:
+        output_text.insert(END, f"{x}\n")
+
+
 if __name__ == "__main__":
     if not os.path.exists('data'):
         os.makedirs('data')
@@ -595,7 +613,8 @@ if __name__ == "__main__":
         load_second_image=lambda: load_second_image(panel2, image2),
         load_image_from_db=load_image_from_db,
         open_archive=open_archive,
-        diff_heatmap=lambda: diff_heatmap(panel2)
+        diff_heatmap=lambda: diff_heatmap(panel2),
+        ocr=lambda: ocr(output_text)
     )
 
     # Run the application
