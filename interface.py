@@ -157,71 +157,93 @@ def create_interface(parent, load_image, capture_from_camera, rotate_image_butto
     button_frame = ttk.Frame(main_frame)
     button_frame.pack(side="right", fill="y", padx=10, pady=10)
 
-    # First block: Camera selection and image loading
-    ttk.Label(button_frame, text="Выбор камеры и изображений").pack(pady=10)
+    section_header = {"font": ("Helvetica", 12, "bold"), "anchor": "w"}
+
+    ttk.Separator(button_frame, bootstyle="dark").pack(fill="x", pady=10)
+    ttk.Label(button_frame, text="Камера и изображения", **section_header).pack(pady=(0, 5), anchor="w")
+
+    # Camera selection
     camera_list = get_camera_list()
-    selected_camera = ttk.Combobox(button_frame, values=camera_list, state="readonly", font=('Helvetica', 12))
-    selected_camera.pack(pady=10)
-    if selected_camera.get() != "":
+    selected_camera = ttk.Combobox(
+        button_frame, 
+        values=camera_list, 
+        state="readonly",
+        bootstyle="dark"
+    )
+    selected_camera.pack(fill="x", pady=5)
+    if camera_list:
         selected_camera.current(0)
 
     # Buttons with rounded corners
-    button_style = {"bootstyle": "primary-outline", "width": 20}
-    btn_load_image = ttk.Button(button_frame, text="Загрузить изображение", command=load_image, **button_style)
-    btn_load_image.pack(pady=10)
+    button_style = {"bootstyle": "outline", "width": 20}
+    ttk.Button(button_frame, text="Загрузить изображение", command=load_image, **button_style).pack(pady=5)
 
-    btn_load_second_image = ttk.Button(button_frame, text="Загрузить 2 изображение", command=load_second_image,
-                                       **button_style)
-    btn_load_second_image.pack(pady=10)
+    ttk.Button(button_frame, text="Загрузить 2 изображение", command=load_second_image,
+                                       **button_style).pack(pady=5)
 
-    btn_capture_camera = ttk.Button(button_frame, text="Сделать фото с камеры", command=capture_from_camera,
-                                    **button_style)
-    btn_capture_camera.pack(pady=10)
+    ttk.Button(button_frame, text="Сделать фото с камеры", command=capture_from_camera,
+                                    **button_style).pack(pady=5)
 
     # Add a combobox for loading images from the database
-    ttk.Label(button_frame, text="Выбор изображения из базы данных").pack(pady=10)
+    ttk.Separator(button_frame, bootstyle="dark").pack(fill="x", pady=10)
+    ttk.Label(button_frame, text="Открыть из датабазы", **section_header).pack(pady=(0, 5), anchor="w")
+    
     image_names = get_image_names_from_db()
-    selected_image = ttk.Combobox(button_frame, values=image_names, state="readonly", font=('Helvetica', 12))
-    selected_image.pack(pady=10)
+    # selected_image = ttk.Combobox(button_frame, values=image_names, state="readonly", font=('Helvetica', 12)).pack(pady=5)
+    selected_image = ttk.Combobox(
+        button_frame, 
+        values=image_names, 
+        state="readonly",
+        bootstyle="dark"
+    )
+    selected_image.pack(fill="x", pady=5)
 
     # Button to load an image from the combobox
-    btn_load_from_db = ttk.Button(button_frame, text="Загрузить из базы данных",
-                                  command=lambda: load_image_from_db(selected_image.get(), panel1), **button_style)
-    btn_load_from_db.pack(pady=10)
+    ttk.Button(button_frame, text="Загрузить из базы данных",
+                                  command=lambda: load_image_from_db(selected_image.get(), panel1), **button_style).pack(pady=5)
 
     # Second block: Image processing
-    ttk.Label(button_frame, text="Обработка изображений").pack(pady=10)
-    btn_rotate_image = ttk.Button(button_frame, text="Повернуть изображение", command=rotate_image_button,
-                                  **button_style)
-    btn_rotate_image.pack(pady=10)
+    ttk.Label(button_frame, text="Обработка изображений", **section_header).pack(pady=(0, 5), anchor="w")
+    ttk.Button(button_frame, text="Повернуть изображение", command=rotate_image_button,
+                                  **button_style).pack(pady=5)
 
-    btn_compare_images = ttk.Button(button_frame, text="Найти различия", command=compare_images, **button_style)
-    btn_compare_images.pack(pady=10)
+    ttk.Button(button_frame, text="Найти различия", command=compare_images, **button_style).pack(pady=5)
 
-    btn_infer_image = ttk.Button(button_frame, text="Инференс YOLO", command=infer_image_with_yolo, **button_style)
-    btn_infer_image.pack(pady=10)
+    ttk.Separator(button_frame, bootstyle="dark").pack(fill="x", pady=10)
+    ttk.Label(button_frame, text="ИИ обработка", **section_header).pack(pady=(0, 5), anchor="w")
+    ttk.Button(button_frame, text="Элементы фото", command=infer_image_with_yolo, **button_style).pack(pady=5)
 
-    btn_cont_infer = ttk.Button(button_frame, text="Инференс в реальном времени", command=continuous_infer, **button_style)
-    btn_cont_infer.pack(pady=10)
+    ttk.Button(button_frame, text="Элементы видео", command=continuous_infer, **button_style).pack(pady=5)
 
     # Button to open the archive
-    btn_open_archive = ttk.Button(button_frame, text="Архив", command=open_archive, **button_style)
-    btn_open_archive.pack(pady=10)
+    ttk.Button(button_frame, text="Архив", command=open_archive, **button_style).pack(pady=5)
 
-    btn_diff_heatmap = ttk.Button(button_frame, text="Карта различий", command=diff_heatmap, **button_style)
-    btn_diff_heatmap.pack(pady=10)
+    ttk.Button(button_frame, text="Различия", command=diff_heatmap, **button_style).pack(pady=5)
 
-    btn_ocr = ttk.Button(button_frame, text="Найти текст", command=ocr, **button_style)
-    btn_ocr.pack(pady=10)
+    ttk.Button(button_frame, text="Найти текст", command=ocr, **button_style).pack(pady=5)
+
+    ttk.Separator(button_frame, bootstyle="dark").pack(fill="x", pady=10)
+    output_text = Text(
+        main_frame, 
+        height=5, 
+        bg="#1B263B", 
+        fg="white", 
+        font=("Helvetica", 10),
+        relief="flat",
+        padx=5,
+        pady=5
+    )
+    output_text.pack(side="bottom", fill="x", padx=10, pady=10)
 
     # Exit button at the bottom
-    btn_exit = ttk.Button(button_frame, text="Выйти", command=parent.quit, **button_style)
-    btn_exit.pack(pady=10, side="bottom")
-
-    # Create a text box for output at the bottom
-    output_text = Text(main_frame, height=5, width=30, bg='#1B263B', fg='white', font=('Helvetica', 12), bd=2,
-                       relief='solid')
-    output_text.pack(side="bottom", fill="x", padx=10, pady=10)
+    ttk.Button(
+        button_frame, 
+        text="Exit", 
+        command=parent.quit,
+        bootstyle="danger-outline",
+        width=25,
+        padding=5
+    ).pack(side="bottom", pady=10)
 
     # Create a frame for displaying images on the left and right
     image_frame = ttk.Frame(main_frame)
@@ -235,7 +257,6 @@ def create_interface(parent, load_image, capture_from_camera, rotate_image_butto
     panel2.pack(side="right", padx=10, pady=10, expand=True)
 
     # Add a button to send data via email
-    btn_send_email = ttk.Button(button_frame, text="Отправить результат по почте", command=send_selected_result, **button_style)
-    btn_send_email.pack(pady=10)
+    ttk.Button(button_frame, text="Отправить результат по почте", command=send_selected_result, **button_style).pack(pady=5)
 
     return panel1, panel2, output_text, selected_camera

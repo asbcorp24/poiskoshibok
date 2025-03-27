@@ -15,17 +15,13 @@ import winclip
 from interface import open_archive
 from anomalib.models import WinClip
 from anomalib.engine import Engine
-from ttkthemes import ThemedTk
 import easyocr
+import ttkbootstrap as ttk
+import threading
 
 
-yolo_model = YOLO("best.onnx", task="detect")
-winclip_engine = Engine(task="segmentation")
-winclip_model = WinClip.load_from_checkpoint("winclip_model.ckpt")
-winclip_model.to("cpu")
 
 
-is_continuous_infer = False
 
 def create_database():
     '''Создание или подключение к базе данных SQLite'''
@@ -156,7 +152,7 @@ def model_infer(image, save_directory, save_to_json=False) -> dict:
     сохраняет результат в текстовом виде и в виде результирующей картинки в save_directory,
     возвращает словарь Имя элемента -> количество штук на картинке
     '''
-    results = yolo_model(image)
+    results = YOLO_MODEL(image)
     res = results[0]
 
     elements = dict()
@@ -462,9 +458,9 @@ def compare_images():
 
 
 def continuous_infer_handler(root, panel, elem_textbox, camera_index):
-    global is_continuous_infer
+    global IS_CONTINUOUS_INFER
 
-    is_continuous_infer = not is_continuous_infer
+    IS_CONTINUOUS_INFER = not IS_CONTINUOUS_INFER
 
     def update_frame():
         # Read a frame from the camera
@@ -476,7 +472,7 @@ def continuous_infer_handler(root, panel, elem_textbox, camera_index):
             return
         
         # Process the frame with the YOLO model
-        results = yolo_model(frame)
+        results = YOLO_MODEL(frame)
 
         ''''''
         res = results[0]
@@ -508,11 +504,11 @@ def continuous_infer_handler(root, panel, elem_textbox, camera_index):
         panel.image = img_tk  # Keep a reference to avoid garbage collection
 
         # Call this function again after a short delay
-        if is_continuous_infer:
+        if IS_CONTINUOUS_INFER:
             root.after(100, update_frame)  # Update every 100 ms
 
 
-    if is_continuous_infer:
+    if IS_CONTINUOUS_INFER:
         cam = CameraHandle().get_cam(camera_index)
         update_frame()  # Start the frame update loop
     else:
@@ -530,7 +526,7 @@ def diff_heatmap(panel):
     tmp_file = "winclip/temp_image.jpg"
     cv2.imwrite(tmp_file, img1)
 
-    rets = winclip_engine.predict(winclip_model, data_path=tmp_file, return_predictions=True)
+    rets = WINCLIP_ENGINE.predict(WINCLIP_MODEL, data_path=tmp_file, return_predictions=True)
 
     shutil.rmtree("results")
 
@@ -563,43 +559,93 @@ def ocr(output_text):
     if img1 is None:
         print("Нет изображения для обработки")
         return
+    
+    output_text.delete(1.0, END)
+
+    qcd = cv2.QRCodeDetector()
+    ok, data, _, _ = qcd.detectAndDecodeMulti(img1)
+
+    if ok:
+        output_text.insert(END, f"Обнаружены Qr коды:\n")
+        for x in data:
+            output_text.insert(END, f"{x}\n")
+        output_text.insert(END, "\n")
 
     reader = easyocr.Reader(['en'])
     text = reader.readtext(img1, decoder="beamsearch", detail=0)
 
-    output_text.delete(1.0, END)
+    if text:
+        output_text.insert(END, f"Текст изображения:\n")
+        for x in text:
+            output_text.insert(END, f"{x}\n")
 
-    for x in text:
-        output_text.insert(END, f"{x}\n")
 
+def initialization_func():
+    global YOLO_MODEL, WINCLIP_ENGINE, WINCLIP_MODEL
 
-if __name__ == "__main__":
+    YOLO_MODEL = YOLO("best.onnx", task="detect")
+    WINCLIP_ENGINE = Engine(task="segmentation")
+    WINCLIP_MODEL = WinClip.load_from_checkpoint("winclip_model.ckpt")
+    WINCLIP_MODEL.to("cpu")
+
     if not os.path.exists('data'):
         os.makedirs('data')
     create_database()
 
+
+if __name__ == "__main__":
+    YOLO_MODEL = None
+    WINCLIP_ENGINE = None
+    WINCLIP_MODEL = None
+    IS_CONTINUOUS_INFER = False
+    STARTED = False
+
+    t = threading.Thread(target=initialization_func)
+    t.start()
+
     image1 = {"image": None}
     image2 = {"image": None}
 
-    # Create the main application window with a dark theme
-    mainRoot = ThemedTk(theme="equilux")  # Use a dark theme
-    mainRoot.title("Tabbed Application")
+    mainRoot = ttk.Window(
+        themename="superhero",  # Using ttkbootstrap's dark theme
+        title="Tabbed Application",
+        size=(1600, 1000),
+        minsize=(800, 600),
+        resizable=(True, True)
+    )
+    mainRoot.withdraw()
 
-    # Apply dark theme to all widgets
-    style = tk.ttk.Style(mainRoot)
-    style.theme_use("equilux")  # Set the theme
+    loading_screen = tk.Toplevel(mainRoot)
+    loading_label = tk.Label(loading_screen, text="Loading")
+    loading_label.pack()
 
-    # Create a Notebook (tabbed interface)
-    notebook = tk.ttk.Notebook(mainRoot)
-    notebook.pack(fill="both", expand=True)
+    # While the thread is alive
+    while t.is_alive():
+        # Update the root so it will keep responding
+        mainRoot.update()
+    print("Non-GUI thread is done")
+
+    loading_screen.destroy()
+    # Show the main window
+    mainRoot.deiconify()
+    mainRoot.focus_force()
+
+    style = ttk.Style()
+    style.configure("TNotebook.Tab", font=('Helvetica', 12, 'bold'), padding=[15, 5])
+    style.configure("TButton", font=('Helvetica', 12))
+
+    # Create tabbed interface
+    notebook = ttk.Notebook(mainRoot, bootstyle="dark")
+    notebook.pack(fill="both", expand=True, padx=10, pady=10)
 
     # Create two frames for the tabs
-    frame1 = tk.ttk.Frame(notebook)
-    frame2 = tk.ttk.Frame(notebook)
+    frame1 = tk.ttk.Frame(notebook, padding=10)
+    frame2 = tk.ttk.Frame(notebook, padding=10)
 
     # Add the frames to the notebook as tabs
     notebook.add(frame1, text="Tab 1")
     notebook.add(frame2, text="Tab 2")
+
 
     # Create the interface inside frame1
     panel1, panel2, output_text, selected_camera = create_interface(
