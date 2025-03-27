@@ -615,15 +615,55 @@ if __name__ == "__main__":
     )
     mainRoot.withdraw()
 
+    # Create a larger loading screen
     loading_screen = tk.Toplevel(mainRoot)
-    loading_label = tk.Label(loading_screen, text="Loading")
-    loading_label.pack()
+    loading_screen.title("Loading...")
+    loading_screen.geometry("300x150")  # Larger window
 
-    # While the thread is alive
+    # Loading label with larger font
+    loading_label = tk.Label(
+        loading_screen, 
+        text="Loading", 
+        font=("Arial", 14)
+    )
+    loading_label.pack(pady=20)
+
+    # Simple animation dots
+    dots = tk.StringVar(value="")
+    loading_dots = tk.Label(
+        loading_screen, 
+        textvariable=dots, 
+        font=("Arial", 14)
+    )
+    loading_dots.pack()
+
+    # Progress bar frame
+    progress_frame = tk.Frame(loading_screen, height=20, width=250, bg="lightgray")
+    progress_frame.pack(pady=20)
+    progress_bar = tk.Frame(progress_frame, height=18, width=0, bg="blue")
+    progress_bar.place(relx=0, rely=0, anchor="w")
+
+    def update_loading_animation():
+        # Update dots animation
+        current_dots = dots.get()
+        dots.set(current_dots + "." if len(current_dots) < 3 else "")
+        
+        # Update progress bar (0-100% over the loading period)
+        if t.is_alive():
+            progress_width = min(248, progress_bar.winfo_width() + 5)
+            progress_bar.config(width=progress_width)
+            mainRoot.after(100, update_loading_animation)
+        else:
+            loading_screen.destroy()
+            mainRoot.deiconify()
+            mainRoot.focus_force()
+
+    # Start the animation
+    mainRoot.after(100, update_loading_animation)
+
+    # Main loop to keep the GUI responsive
     while t.is_alive():
-        # Update the root so it will keep responding
         mainRoot.update()
-    print("Non-GUI thread is done")
 
     loading_screen.destroy()
     # Show the main window
